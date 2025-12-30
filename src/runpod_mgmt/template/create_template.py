@@ -223,6 +223,11 @@ Environment Variables:
         if result and isinstance(result, dict):
             if "id" in result:
                 logger.info(f"Template ID: {result['id']}")
+                os.environ['TEMPLATE_ID'] = result['id']
+            else:
+                logger.error(f"Template ID not found in response: {result}")
+                raise ValueError("Template ID missing in response - cannot set output.")
+        else:
             logger.info(f"Full response: {result}")
     
     except Exception as e:

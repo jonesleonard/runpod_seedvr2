@@ -3,6 +3,13 @@ name: Create or Update RunPod Endpoint
 on:
   workflow_call:
     inputs:
+      environment:
+        required: true
+        type: string
+      runpod_rest_api_base_url:
+        description: 'RunPod REST API base URL'
+        required: true
+        type: string
       template_id:
         description: 'RunPod template ID to use'
         required: true
@@ -59,37 +66,6 @@ on:
       endpoint_id:
         description: 'The ID of the created/updated endpoint'
         value: ${{ jobs.create-endpoint.outputs.endpoint_id }}
-  workflow_dispatch:
-    inputs:
-      template_id:
-        description: 'RunPod template ID to use'
-        required: true
-        type: string
-      endpoint_name:
-        description: 'RunPod endpoint name'
-        required: false
-        type: string
-        default: 'SeedVR2 Video Upscaler'
-      gpu_ids:
-        description: 'GPU type IDs'
-        required: false
-        type: string
-        default: 'AMPERE_16'
-      workers_min:
-        description: 'Minimum number of workers'
-        required: false
-        type: number
-        default: 0
-      workers_max:
-        description: 'Maximum number of workers'
-        required: false
-        type: number
-        default: 1
-      python_version:
-        description: 'Python version to use'
-        required: false
-        type: string
-        default: '3.13'
 
 env:
   TEMPLATE_ID: ${{ inputs.template_id }}
@@ -100,6 +76,7 @@ permissions:
 
 jobs:
   create-endpoint:
+    environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     outputs:
       endpoint_id: ${{ steps.create.outputs.endpoint_id }}
@@ -132,13 +109,13 @@ jobs:
           OUTPUT=$(python -m runpod_mgmt.endpoint.create_endpoint \
             --name "${{ env.ENDPOINT_NAME }}" \
             --template-id "${{ env.TEMPLATE_ID }}" \
-            --gpu-ids "${{ inputs.gpu_ids }}" \
-            --workers-min ${{ inputs.workers_min }} \
-            --workers-max ${{ inputs.workers_max }} \
-            --idle-timeout ${{ inputs.idle_timeout }} \
-            --execution-timeout ${{ inputs.execution_timeout_ms }} \
-            --scaler-type "${{ inputs.scaler_type }}" \
-            --scaler-value ${{ inputs.scaler_value }} \
+            --gpu-ids "${{ vars.GPU_IDS }}" \
+            --workers-min ${{ vars.WORKERS_MIN }} \
+            --workers-max ${{ vars.WORKERS_MAX }} \
+            --idle-timeout ${{ vars.IDLE_TIMEOUT }} \
+            --execution-timeout ${{ vars.EXECUTION_TIMEOUT_MS }} \
+            --scaler-type "${{ vars.SCALER_TYPE }}" \
+            --scaler-value ${{ vars.SCALER_VALUE }} \
             2>&1)
           
           echo "$OUTPUT"

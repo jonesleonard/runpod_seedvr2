@@ -28,31 +28,6 @@ on:
     secrets:
       RUNPOD_API_KEY:
         required: true
-  workflow_dispatch:
-    inputs:
-      image_name:
-        description: 'Docker image name'
-        required: true
-        default: 'seedvr2-upscaler'
-      image_tag:
-        description: 'Docker image tag'
-        required: true
-        default: 'latest'
-      runpod_rest_api_base_url:
-        description: 'RunPod REST API base URL'
-        required: false
-        type: string
-        default: 'https://rest.runpod.io/v1'
-      template_name:
-        description: 'RunPod template name'
-        required: false
-        default: 'SeedVR2 Video Upscaler'
-      python_version:
-        description: 'Python version to use in the RunPod template'
-        required: false
-        type: string
-        default: '3.13'
-
 env:
   FULL_IMAGE_NAME: ${{ inputs.full_image_name }}
   TEMPLATE_NAME: ${{ inputs.template_name }}
@@ -112,7 +87,8 @@ jobs:
           export PYTHONPATH="${GITHUB_WORKSPACE}/src"
           python -m runpod_mgmt.template.create_template "${ARGS[@]}"
           
-          echo "template_id=hello" >> "$GITHUB_OUTPUT"
+          echo "template_id="${TEMPLATE_ID}"
+          echo "template_id="${TEMPLATE_ID}" >> "$GITHUB_OUTPUT"
       
       - name: Template creation result
         if: success()

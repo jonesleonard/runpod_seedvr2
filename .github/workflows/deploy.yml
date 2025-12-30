@@ -54,3 +54,15 @@ jobs:
       template_name: 'seedvr2_upscaler'
     secrets:
       RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+  
+  create-update-endpoint:
+    name: Create/Update RunPod Endpoint
+    needs: create-update-runpod-template
+    uses: ./.github/workflows/runpod-endpoint.yml
+    with:
+      environment: "dev"
+      runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
+      python_version: ${{ vars.PYTHON_VERSION }}
+      template_id: ${{ needs.create-update-runpod-template.outputs.template_id }}
+    secrets:
+      RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
