@@ -1,4 +1,4 @@
-FROM nvidia/cuda:13.1.0-runtime-ubuntu24.04
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -30,7 +30,7 @@ RUN git clone "$SEEDVR2_REPO" /opt/seedvr2 \
     && pip install --no-cache-dir .
 
 # Run help command to verify installation
-RUN python /opt/seedvr2/inference_cli.py
+RUN python /opt/seedvr2/inference_cli.py --help
 
 WORKDIR /app
 
