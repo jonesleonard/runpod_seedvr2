@@ -8,7 +8,7 @@ set -euo pipefail
 readonly WORK_DIR="/work"
 readonly INPUT_DIR="${WORK_DIR}/in"
 readonly OUTPUT_DIR="${WORK_DIR}/out"
-readonly MODEL_DIR="/runpod-volume/models"  # Network volume - persists across cold starts
+readonly MODEL_DIR="${MODELS_DIR:-/models}"  # Local model storage (can override)
 readonly INPUT_FILE="${INPUT_DIR}/segment.mp4"
 readonly OUTPUT_FILE="${OUTPUT_DIR}/up.mp4"
 
@@ -200,18 +200,17 @@ main() {
     log_info "Creating work directories..."
     mkdir -p "$INPUT_DIR" "$OUTPUT_DIR"
     
-    # Check models exist on network volume (pre-populated, not downloaded per-job)
+    # Check models exist locally (pre-populated or downloaded at startup)
     local model_count
     model_count=$(find "$MODEL_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
     
     if [[ "$model_count" -eq 0 ]]; then
-        log_error "No models found on network volume at $MODEL_DIR"
-        log_error "Models must be pre-populated on the network volume before running jobs."
-        log_error "See documentation for instructions on populating the network volume."
+        log_error "No models found at $MODEL_DIR"
+        log_error "Models must be present before running jobs."
         exit 1
     fi
     
-    log_info "Using models from network volume ($model_count files found in $MODEL_DIR)"
+    log_info "Using models from $MODEL_DIR ($model_count files found)"
     log_metric "model_file_count" "$model_count"
     
     # Download input segment using presigned URL

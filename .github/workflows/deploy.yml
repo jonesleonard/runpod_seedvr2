@@ -32,34 +32,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-network-volume-models:
-    name: Deploy Network Volume and Models
-    uses: ./.github/workflows/deploy-network-volume-models.yml
-    permissions:
-      contents: read
-      id-token: write
-    with:
-      runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
-      network_volume_name: 'seedvr2-models-volume'
-      network_volume_size: '50'
-      template_name: 'seedvr2_model_downloader_template'
-      presign_expires_seconds: '3600'
-      aws_role_arn: ${{ vars.NETWORK_VOLUME_MODELS_AWS_ROLE_ARN }}
-      data_center_id: ${{ vars.NETWORK_VOLUME_MODELS_DATA_CENTER_ID }}
-      image_name: ${{ vars.NETWORK_VOLUME_MODELS_IMAGE_NAME }}
-      models_bucket: ${{ vars.NETWORK_VOLUME_MODELS_BUCKET }}
-      vae_key: ${{ vars.NETWORK_VOLUME_MODELS_VAE_KEY }}
-      dit_key: ${{ vars.NETWORK_VOLUME_MODELS_DIT_KEY }}
-      tag: ${{ github.event.inputs.tag || 'latest' }}
-      python_version: ${{ vars.PYTHON_VERSION }}
-    secrets:
-      RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   build-and-push:
     name: Build and Push Docker Image
     uses: ./.github/workflows/docker-build-push.yml
-    needs: deploy-network-volume-models
     with:
       dockerhub_username: ${{ vars.DOCKERHUB_USERNAME }}
       image_name: ${{ vars.UPSCALER_IMAGE_NAME }}

@@ -29,6 +29,9 @@ RUN git clone "$SEEDVR2_REPO" /opt/seedvr2 \
     && pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir .
 
+# Run help command to verify installation
+RUN python inference_cli.py --help
+
 WORKDIR /app
 
 # Copy requirements and install

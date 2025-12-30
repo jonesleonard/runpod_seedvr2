@@ -8,13 +8,71 @@ import subprocess
 import logging
 import time
 import json
-from typing import Dict, Any
+from pathlib import Path
+from typing import Dict, Any, List
+from urllib.parse import urlparse
+from urllib.request import urlopen
 import runpod
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 SCRIPT_PATH = "/app/upscale_segment.sh"
+MODELS_DEFAULT_DIR = "/models"
+_MODELS_READY = False
+
+
+def _get_model_urls(job_input: Dict[str, Any]) -> List[str]:
+    urls = []
+    for key in ("vae_model_presigned_url", "dit_model_presigned_url"):
+        value = job_input.get(key)
+        if value:
+            urls.append(str(value).strip())
+
+    return [u for u in urls if u]
+
+
+def _filename_from_url(url: str) -> str:
+    filename = Path(urlparse(url).path).name
+    if not filename:
+        raise ValueError(f"Could not infer filename from URL: {url}")
+    return filename
+
+
+def _download_file(url: str, dest_path: Path) -> None:
+    logger.info("Downloading %s -> %s", url, dest_path)
+    with urlopen(url, timeout=60) as response, open(dest_path, "wb") as out_file:
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            out_file.write(chunk)
+    logger.info("Downloaded %s (%s bytes)", dest_path, dest_path.stat().st_size)
+
+
+def _ensure_models_downloaded(job_input: Dict[str, Any]) -> None:
+    global _MODELS_READY
+    if _MODELS_READY:
+        return
+
+    urls = _get_model_urls(job_input)
+    if not urls:
+        logger.info("No model URLs provided; skipping model download.")
+        _MODELS_READY = True
+        return
+
+    models_dir = Path(os.environ.get("MODELS_DIR", MODELS_DEFAULT_DIR))
+    models_dir.mkdir(parents=True, exist_ok=True)
+
+    for url in urls:
+        filename = _filename_from_url(url)
+        dest_path = models_dir / filename
+        if dest_path.exists() and dest_path.stat().st_size > 0:
+            logger.info("Model already present: %s", dest_path)
+            continue
+        _download_file(url, dest_path)
+
+    _MODELS_READY = True
 
 
 def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
@@ -33,7 +91,7 @@ def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
         }
     }
     
-    Models are loaded from the network volume mounted at /runpod-volume/models.
+    Models are loaded from local storage (default: /models).
     """
     start_time = time.time()
     
@@ -41,10 +99,18 @@ def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
         # Validate input - now using presigned URLs instead of S3 URIs
         input_presigned_url = job_input.get("input_presigned_url")
         output_presigned_url = job_input.get("output_presigned_url")
+        vae_model_presigned_url = job_input.get("vae_model_presigned_url")
+        dit_model_presigned_url = job_input.get("dit_model_presigned_url")
         params = job_input.get("params", {})
         
         if not input_presigned_url or not output_presigned_url:
             raise ValueError("input_presigned_url and output_presigned_url are required")
+        if not vae_model_presigned_url or not dit_model_presigned_url:
+            raise ValueError(
+                "vae_model_presigned_url and dit_model_presigned_url are required"
+            )
+
+        _ensure_models_downloaded(job_input)
         
         logger.info("Starting upscale job with presigned URLs")
         
@@ -60,6 +126,7 @@ def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
             "debug": "DEBUG",
             "seed": "SEED",
             "color_correction": "COLOR_CORRECTION",
+            "vae_model": "VAE_MODEL",
             "model": "MODEL",
             "resolution": "RESOLUTION",
             "batch_size_strategy": "BATCH_SIZE_STRATEGY",
@@ -126,7 +193,7 @@ def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
         
         return {
             "status": "success",
-            "output_s3_uri": output_s3_uri,
+            "output_presigned_url": output_presigned_url,
             "metrics": {
                 **metrics,
                 "total_duration_seconds": round(total_duration, 2)
