@@ -1,0 +1,162 @@
+name: Create or Update RunPod Endpoint
+
+on:
+  workflow_call:
+    inputs:
+      template_id:
+        description: 'RunPod template ID to use'
+        required: true
+        type: string
+      endpoint_name:
+        description: 'RunPod endpoint name'
+        required: false
+        type: string
+        default: 'SeedVR2 Video Upscaler'
+      gpu_ids:
+        description: 'GPU type IDs'
+        required: false
+        type: string
+        default: 'AMPERE_16'
+      workers_min:
+        description: 'Minimum number of workers'
+        required: false
+        type: number
+        default: 0
+      workers_max:
+        description: 'Maximum number of workers'
+        required: false
+        type: number
+        default: 1
+      idle_timeout:
+        description: 'Idle timeout in seconds'
+        required: false
+        type: number
+        default: 5
+      execution_timeout_ms:
+        description: 'Execution timeout in milliseconds'
+        required: false
+        type: number
+        default: 600000
+      scaler_type:
+        description: 'Scaler type'
+        required: false
+        type: string
+        default: 'QUEUE_DELAY'
+      scaler_value:
+        description: 'Scaler value'
+        required: false
+        type: number
+        default: 4
+      python_version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.13'
+    secrets:
+      RUNPOD_API_KEY:
+        required: true
+    outputs:
+      endpoint_id:
+        description: 'The ID of the created/updated endpoint'
+        value: ${{ jobs.create-endpoint.outputs.endpoint_id }}
+  workflow_dispatch:
+    inputs:
+      template_id:
+        description: 'RunPod template ID to use'
+        required: true
+        type: string
+      endpoint_name:
+        description: 'RunPod endpoint name'
+        required: false
+        type: string
+        default: 'SeedVR2 Video Upscaler'
+      gpu_ids:
+        description: 'GPU type IDs'
+        required: false
+        type: string
+        default: 'AMPERE_16'
+      workers_min:
+        description: 'Minimum number of workers'
+        required: false
+        type: number
+        default: 0
+      workers_max:
+        description: 'Maximum number of workers'
+        required: false
+        type: number
+        default: 1
+      python_version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.13'
+
+env:
+  TEMPLATE_ID: ${{ inputs.template_id }}
+  ENDPOINT_NAME: ${{ inputs.endpoint_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  create-endpoint:
+    runs-on: ubuntu-latest
+    outputs:
+      endpoint_id: ${{ steps.create.outputs.endpoint_id }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: 'pip'
+          cache-dependency-path: 'src/runpod_mgmt/requirements.txt'
+      
+      - name: Install dependencies
+        run: pip install -r src/runpod_mgmt/requirements.txt
+      
+      - name: Create or update RunPod endpoint
+        id: create
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+        run: |
+          echo "Creating/updating RunPod endpoint: ${{ env.ENDPOINT_NAME }}"
+          echo "Using template ID: ${{ env.TEMPLATE_ID }}"
+          
+          export PYTHONPATH="${GITHUB_WORKSPACE}/src"
+          
+          # Capture output to extract endpoint ID
+          OUTPUT=$(python -m runpod_mgmt.endpoint.create_endpoint \
+            --name "${{ env.ENDPOINT_NAME }}" \
+            --template-id "${{ env.TEMPLATE_ID }}" \
+            --gpu-ids "${{ inputs.gpu_ids }}" \
+            --workers-min ${{ inputs.workers_min }} \
+            --workers-max ${{ inputs.workers_max }} \
+            --idle-timeout ${{ inputs.idle_timeout }} \
+            --execution-timeout ${{ inputs.execution_timeout_ms }} \
+            --scaler-type "${{ inputs.scaler_type }}" \
+            --scaler-value ${{ inputs.scaler_value }} \
+            2>&1)
+          
+          echo "$OUTPUT"
+          
+          # Extract endpoint ID from output (adjust regex based on actual output format)
+          ENDPOINT_ID=$(echo "$OUTPUT" | grep -oP "Endpoint ID: \K[a-z0-9]+" || echo "")
+          
+          if [ -n "$ENDPOINT_ID" ]; then
+            echo "endpoint_id=$ENDPOINT_ID" >> $GITHUB_OUTPUT
+            echo "Endpoint ID: $ENDPOINT_ID"
+          fi
+      
+      - name: Endpoint creation result
+        if: success()
+        run: |
+          echo "✓ RunPod endpoint successfully created/updated"
+          echo "Name: ${{ env.ENDPOINT_NAME }}"
+          echo "Template ID: ${{ env.TEMPLATE_ID }}"
+          if [ -n "${{ steps.create.outputs.endpoint_id }}" ]; then
+            echo "Endpoint ID: ${{ steps.create.outputs.endpoint_id }}"
+          fi
