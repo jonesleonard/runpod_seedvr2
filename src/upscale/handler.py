@@ -103,6 +103,9 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
         # Support both "input" wrapper and direct job dict
         job_input = job.get("input", job)
 
+        # debug log job input
+        logger.debug(f"Received job input: {json.dumps(job_input, indent=2)}")
+
         # Validate input - now using presigned URLs instead of S3 URIs
         input_presigned_url = job_input.get("input_presigned_url")
         output_presigned_url = job_input.get("output_presigned_url")
