@@ -40,7 +40,7 @@ jobs:
   create-update-template:
     runs-on: ubuntu-latest
     outputs:
-      template_id: ${{ steps.run-python-script.outputs.template_id }}
+      template_id: ${{ steps.run.outputs.template_id }}
     
     steps:
       - name: Checkout code
@@ -57,7 +57,7 @@ jobs:
         run: pip install -r src/runpod_mgmt/requirements.txt
       
       - name: Create or update RunPod template
-        id: run-python-script
+        id: run
         env:
           RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
         run: |
@@ -85,13 +85,13 @@ jobs:
           )
           
           export PYTHONPATH="${GITHUB_WORKSPACE}/src"
-          TEMPLATE_ID=$(python -m runpod_mgmt.template.create_template "${ARGS[@]}")
           
-          echo "Template ID: ${TEMPLATE_ID}"
-          echo "template_id=${TEMPLATE_ID}" >> "$GITHUB_OUTPUT"
+          python -m runpod_mgmt.template.create_template "${ARGS[@]}"          
+          echo "GITHUB OUTPUT: ${GITHUB_OUTPUT}"
       
       - name: Template creation result
         if: success()
         run: |
           echo "✓ RunPod template successfully created/updated"
           echo "Image: ${{ env.FULL_IMAGE_NAME }}"
+          echo "Template ID: ${{ steps.run.outputs.template_id }}"

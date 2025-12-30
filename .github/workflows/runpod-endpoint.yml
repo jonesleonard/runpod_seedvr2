@@ -65,7 +65,7 @@ on:
     outputs:
       endpoint_id:
         description: 'The ID of the created/updated endpoint'
-        value: ${{ jobs.create-endpoint.outputs.endpoint_id }}
+        value: ${{ jobs.create-update-endpoint.outputs.endpoint_id }}
 
 env:
   TEMPLATE_ID: ${{ inputs.template_id }}
@@ -75,11 +75,11 @@ permissions:
   contents: read
 
 jobs:
-  create-endpoint:
+  create-update-endpoint:
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
     outputs:
-      endpoint_id: ${{ steps.create.outputs.endpoint_id }}
+      endpoint_id: ${{ steps.run.outputs.endpoint_id }}
     
     steps:
       - name: Checkout code
@@ -96,7 +96,7 @@ jobs:
         run: pip install -r src/runpod_mgmt/requirements.txt
       
       - name: Create or update RunPod endpoint
-        id: create
+        id: run
         env:
           RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
         run: |
@@ -105,28 +105,16 @@ jobs:
           
           export PYTHONPATH="${GITHUB_WORKSPACE}/src"
           
-          # Capture output to extract endpoint ID
-          OUTPUT=$(python -m runpod_mgmt.endpoint.create_endpoint \
+          python -m runpod_mgmt.endpoint.create_endpoint \
             --name "${{ env.ENDPOINT_NAME }}" \
             --template-id "${{ env.TEMPLATE_ID }}" \
-            --gpu-ids "${{ vars.GPU_IDS }}" \
-            --workers-min ${{ vars.WORKERS_MIN }} \
-            --workers-max ${{ vars.WORKERS_MAX }} \
-            --idle-timeout ${{ vars.IDLE_TIMEOUT }} \
-            --execution-timeout ${{ vars.EXECUTION_TIMEOUT_MS }} \
-            --scaler-type "${{ vars.SCALER_TYPE }}" \
-            --scaler-value ${{ vars.SCALER_VALUE }} \
-            2>&1)
-          
-          echo "$OUTPUT"
-          
-          # Extract endpoint ID from output (adjust regex based on actual output format)
-          ENDPOINT_ID=$(echo "$OUTPUT" | grep -oP "Endpoint ID: \K[a-z0-9]+" || echo "")
-          
-          if [ -n "$ENDPOINT_ID" ]; then
-            echo "endpoint_id=$ENDPOINT_ID" >> $GITHUB_OUTPUT
-            echo "Endpoint ID: $ENDPOINT_ID"
-          fi
+            --gpu-ids "${{ vars.GPU_IDS || inputs.gpu_ids }}" \
+            --workers-min ${{ vars.WORKERS_MIN || inputs.workers_min }} \
+            --workers-max ${{ vars.WORKERS_MAX || inputs.workers_max }} \
+            --idle-timeout ${{ vars.IDLE_TIMEOUT || inputs.idle_timeout }} \
+            --execution-timeout ${{ vars.EXECUTION_TIMEOUT_MS || inputs.execution_timeout_ms }} \
+            --scaler-type "${{ vars.SCALER_TYPE || inputs.scaler_type }}" \
+            --scaler-value ${{ vars.SCALER_VALUE || inputs.scaler_value }}
       
       - name: Endpoint creation result
         if: success()
@@ -134,6 +122,4 @@ jobs:
           echo "✓ RunPod endpoint successfully created/updated"
           echo "Name: ${{ env.ENDPOINT_NAME }}"
           echo "Template ID: ${{ env.TEMPLATE_ID }}"
-          if [ -n "${{ steps.create.outputs.endpoint_id }}" ]; then
-            echo "Endpoint ID: ${{ steps.create.outputs.endpoint_id }}"
-          fi
+          echo "Endpoint ID: ${{ steps.run.outputs.endpoint_id }}

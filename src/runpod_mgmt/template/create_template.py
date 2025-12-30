@@ -224,8 +224,8 @@ Environment Variables:
             if "id" in result:
                 template_id = result['id']
                 logger.info(f"Template ID: {template_id}")
-                # Print template_id to stdout for GHA to capture
-                print(template_id)
+                with open(os.environ.get("GITHUB_OUTPUT", "/dev/stdout"), "a") as gh_out:
+                    gh_out.write(f"template_id={result['id']}\n")
             else:
                 logger.error(f"Template ID not found in response: {result}")
                 raise ValueError("Template ID missing in response - cannot set output.")

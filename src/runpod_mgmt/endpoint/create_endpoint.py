@@ -224,6 +224,12 @@ Environment Variables:
         if result and isinstance(result, dict):
             if "id" in result:
                 logger.info(f"Endpoint ID: {result['id']}")
+                with open(os.environ.get("GITHUB_OUTPUT", "/dev/stdout"), "a") as gh_out:
+                    gh_out.write(f"endpoint_id={result['id']}\n")
+            else:
+                logger.error(f"Template ID not found in response: {result}")
+                raise ValueError("Template ID missing in response - cannot set output.")
+
             logger.info(f"Full response: {result}")
     
     except Exception as e:
