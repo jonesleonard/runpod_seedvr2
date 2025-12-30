@@ -19,8 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-RUNPOD_API_BASE = "https://rest.runpod.io/v1"
-
+RUNPOD_API_BASE = os.environ.get("RUNPOD_API_BASE_URL")
 
 def find_template_by_id(
     template_id: str,

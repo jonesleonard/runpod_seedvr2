@@ -45,6 +45,7 @@ on:
 env:
   FULL_IMAGE_NAME: ${{ inputs.full_image_name }}
   TEMPLATE_NAME: ${{ inputs.template_name }}
+  RUNPOD_API_BASE_URL: ${{ inputs.runpod_api_base_url || 'https://rest.runpod.io/v1' }}
 
 permissions:
   contents: read

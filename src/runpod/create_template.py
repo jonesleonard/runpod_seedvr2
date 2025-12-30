@@ -12,6 +12,7 @@ import logging
 from typing import Optional
 import runpod
 from find_template_by_id import template_exists
+from update_template_by_id import update_template
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -50,31 +51,25 @@ def create_template(
         
     logger.info(f"Creating/updating RunPod template for image: {image}")
     
-    # Prepare template configuration
+    # Prepare template configuration using SDK snake_case parameters
     template_config = {
         "name": name,
-        "imageName": image,
-        "dockerArgs": "",  # Add any docker arguments if needed
-        "containerDiskInGb": 20,  # Adjust based on your needs
-        "volumeInGb": 50,  # Storage for models and temporary files
-        "volumeMountPath": "/work",
+        "image_name": image,
+        "docker_start_cmd": "",  # Add any docker start command if needed
+        "container_disk_in_gb": 20,  # Adjust based on your needs
+        "volume_in_gb": 50,  # Storage for models and temporary files
+        "volume_mount_path": "/work",
         "ports": "",  # Not needed for serverless
-        "env": []
+        "env": {}
     }
     
     # Add environment variables if provided
     if env_vars:
-        template_config["env"] = [
-            {"key": k, "value": v} for k, v in env_vars.items()
-        ]
+        template_config["env"] = env_vars
     
     # Add serverless-specific configuration
     if is_serverless:
-        template_config.update({
-            "isServerless": True,
-            "startSsh": False,
-            "startJupyter": False,
-        })
+        template_config["is_serverless"] = True
     
     try:
         # Initialize RunPod with API key
@@ -89,10 +84,18 @@ def create_template(
                 )
                 template_id = None
         
-        if template_id:
-            # Update existing template
+        if template_id: 
+            # Update existing template using REST API
             logger.info(f"Updating template ID: {template_id}")
-            response = runpod.update_template(template_id, **template_config)
+            response = update_template(
+                template_id=template_id,
+                name=name,
+                image_name=image,
+                container_disk_in_gb=template_config["container_disk_in_gb"],
+                volume_in_gb=template_config["volume_in_gb"],
+                volume_mount_path=template_config["volume_mount_path"],
+                env=template_config["env"] if template_config["env"] else None,
+                api_key=api_key)
         else:
             # Create new template
             logger.info("Creating new template")
