@@ -27,7 +27,8 @@ def create_or_update_endpoint(
     execution_timeout_ms: int = 600000,
     scaler_type: str = "QUEUE_DELAY",
     scaler_value: int = 4,
-    endpoint_id: Optional[str] = None
+    endpoint_id: Optional[str] = None,
+    network_volume_id: Optional[str] = None
 ) -> dict:
     """
     Create a new endpoint or update an existing one.
@@ -43,6 +44,7 @@ def create_or_update_endpoint(
         scaler_type: Scaler type (default: "QUEUE_DELAY")
         scaler_value: Scaler value (default: 4)
         endpoint_id: If provided, updates existing endpoint instead of creating new
+        network_volume_id: Network volume ID for persistent storage (optional)
     
     Returns:
         dict: Response from RunPod API
@@ -68,7 +70,8 @@ def create_or_update_endpoint(
             idle_timeout=idle_timeout,
             execution_timeout_ms=execution_timeout_ms,
             scaler_type=scaler_type,
-            scaler_value=scaler_value
+            scaler_value=scaler_value,
+            network_volume_id=network_volume_id
         )
     
     # Search for existing endpoint by name
@@ -90,7 +93,8 @@ def create_or_update_endpoint(
             idle_timeout=idle_timeout,
             execution_timeout_ms=execution_timeout_ms,
             scaler_type=scaler_type,
-            scaler_value=scaler_value
+            scaler_value=scaler_value,
+            network_volume_id=network_volume_id
         )
     
     # Create new endpoint
@@ -128,7 +132,8 @@ def create_or_update_endpoint(
                 idle_timeout=idle_timeout,
                 execution_timeout_ms=execution_timeout_ms,
                 scaler_type=scaler_type,
-                scaler_value=scaler_value
+                scaler_value=scaler_value,
+                network_volume_id=network_volume_id
             )
         
         return response
@@ -224,6 +229,12 @@ Environment Variables:
         help="Scaler value (default: 4)"
     )
     
+    parser.add_argument(
+        "--network-volume-id",
+        default=None,
+        help="Network volume ID for persistent model storage (optional)"
+    )
+    
     args = parser.parse_args()
     
     try:
@@ -237,7 +248,8 @@ Environment Variables:
             execution_timeout_ms=args.execution_timeout,
             scaler_type=args.scaler_type,
             scaler_value=args.scaler_value,
-            endpoint_id=args.endpoint_id
+            endpoint_id=args.endpoint_id,
+            network_volume_id=args.network_volume_id
         )
         
         logger.info("✓ Endpoint created/updated successfully!")

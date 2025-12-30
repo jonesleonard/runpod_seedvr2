@@ -8,7 +8,7 @@ set -euo pipefail
 readonly WORK_DIR="/work"
 readonly INPUT_DIR="${WORK_DIR}/in"
 readonly OUTPUT_DIR="${WORK_DIR}/out"
-readonly MODEL_DIR="/models"  # Mounted volume - persists across jobs on same instance
+readonly MODEL_DIR="/runpod-volume/models"  # Network volume - persists across cold starts
 readonly INPUT_FILE="${INPUT_DIR}/segment.mp4"
 readonly OUTPUT_FILE="${OUTPUT_DIR}/up.mp4"
 
@@ -46,7 +46,7 @@ validate_requirements() {
     log_info "Validating requirements..."
     
     # Check required commands
-    local required_commands=(aws python3 ffmpeg)
+    local required_commands=(curl python3 ffmpeg)
     for cmd in "${required_commands[@]}"; do
         if ! command -v "$cmd" &> /dev/null; then
             log_error "Required command not found: $cmd"
@@ -54,25 +54,25 @@ validate_requirements() {
         fi
     done
     
-    # Validate required environment variables
-    if [[ -z "${INPUT_SEGMENT_S3_URI:-}" ]]; then
-        log_error "INPUT_SEGMENT_S3_URI is required (e.g., s3://bucket/segments/EXEC123/raw/seg_0003.mp4)"
+    # Validate required environment variables - now using presigned URLs
+    if [[ -z "${INPUT_PRESIGNED_URL:-}" ]]; then
+        log_error "INPUT_PRESIGNED_URL is required"
         exit 1
     fi
     
-    if [[ -z "${OUTPUT_SEGMENT_S3_URI:-}" ]]; then
-        log_error "OUTPUT_SEGMENT_S3_URI is required (e.g., s3://bucket/segments/EXEC123/upscaled/seg_0003_up.mp4)"
+    if [[ -z "${OUTPUT_PRESIGNED_URL:-}" ]]; then
+        log_error "OUTPUT_PRESIGNED_URL is required"
         exit 1
     fi
     
-    # Validate S3 URI format
-    if [[ ! "$INPUT_SEGMENT_S3_URI" =~ ^s3:// ]]; then
-        log_error "INPUT_SEGMENT_S3_URI must start with s3:// - got: $INPUT_SEGMENT_S3_URI"
+    # Validate presigned URL format (must be HTTPS)
+    if [[ ! "$INPUT_PRESIGNED_URL" =~ ^https:// ]]; then
+        log_error "INPUT_PRESIGNED_URL must be an HTTPS URL"
         exit 1
     fi
     
-    if [[ ! "$OUTPUT_SEGMENT_S3_URI" =~ ^s3:// ]]; then
-        log_error "OUTPUT_SEGMENT_S3_URI must start with s3:// - got: $OUTPUT_SEGMENT_S3_URI"
+    if [[ ! "$OUTPUT_PRESIGNED_URL" =~ ^https:// ]]; then
+        log_error "OUTPUT_PRESIGNED_URL must be an HTTPS URL"
         exit 1
     fi
     
@@ -86,14 +86,6 @@ validate_requirements() {
 }
 
 main() {
-    # Add this near the top of main()
-    readonly MODELS_S3_PREFIX="${MODELS_S3_PREFIX:-}"
-    
-    if [[ -z "$MODELS_S3_PREFIX" ]]; then
-        log_error "MODELS_S3_PREFIX is required for model downloads"
-        exit 1
-    fi
-    
     # Set defaults for SeedVR2 parameters
     readonly DEBUG="${DEBUG:-false}"
     readonly SEED="${SEED:-42}"
@@ -174,8 +166,7 @@ main() {
     echo "Video Upscaler - Starting"
     echo "============================================================================"
     log_info "Configuration:"
-    log_info "  INPUT_SEGMENT_S3_URI: $INPUT_SEGMENT_S3_URI"
-    log_info "  OUTPUT_SEGMENT_S3_URI: $OUTPUT_SEGMENT_S3_URI"
+    log_info "  MODEL_DIR: $MODEL_DIR"
     log_info "  DEBUG: $DEBUG"
     log_info "  SEED: $SEED"
     log_info "  COLOR_CORRECTION: $COLOR_CORRECTION"
@@ -209,50 +200,35 @@ main() {
     log_info "Creating work directories..."
     mkdir -p "$INPUT_DIR" "$OUTPUT_DIR"
     
-    # Ensure model directory exists (mounted volume)
-    mkdir -p "$MODEL_DIR"
-    
-    # Download models from S3 if not cached
+    # Check models exist on network volume (pre-populated, not downloaded per-job)
     local model_count
     model_count=$(find "$MODEL_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
     
     if [[ "$model_count" -eq 0 ]]; then
-        log_info "No cached models found. Downloading SeedVR2 models from S3..."
-        local model_download_start
-        model_download_start=$(date +%s)
-        
-        if ! aws s3 sync "$MODELS_S3_PREFIX" "$MODEL_DIR" --only-show-errors; then
-            log_error "Failed to download models from: $MODELS_S3_PREFIX"
-            exit 1
-        fi
-        
-        local model_download_end
-        model_download_end=$(date +%s)
-        local model_download_duration=$((model_download_end - model_download_start))
-        log_info "Models downloaded in ${model_download_duration} seconds"
-        log_metric "model_download_duration_seconds" "$model_download_duration"
-        
-        # Re-count after download
-        model_count=$(find "$MODEL_DIR" -type f | wc -l | tr -d ' ')
-        if [[ "$model_count" -eq 0 ]]; then
-            log_error "No model files found in $MODEL_DIR after download"
-            exit 1
-        fi
-        log_info "Downloaded $model_count model files"
-        log_metric "model_file_count" "$model_count"
-        log_metric "model_cache_hit" "false"
-    else
-        log_info "Using cached models ($model_count files found in $MODEL_DIR)"
-        log_metric "model_file_count" "$model_count"
-        log_metric "model_cache_hit" "true"
-    fi
-    
-    # Download input segment
-    log_info "Downloading input segment from S3..."
-    if ! aws s3 cp "$INPUT_SEGMENT_S3_URI" "$INPUT_FILE"; then
-        log_error "Failed to download input segment from: $INPUT_SEGMENT_S3_URI"
+        log_error "No models found on network volume at $MODEL_DIR"
+        log_error "Models must be pre-populated on the network volume before running jobs."
+        log_error "See documentation for instructions on populating the network volume."
         exit 1
     fi
+    
+    log_info "Using models from network volume ($model_count files found in $MODEL_DIR)"
+    log_metric "model_file_count" "$model_count"
+    
+    # Download input segment using presigned URL
+    log_info "Downloading input segment..."
+    local download_start
+    download_start=$(date +%s)
+    
+    if ! curl -fsSL --retry 3 --retry-delay 2 -o "$INPUT_FILE" "$INPUT_PRESIGNED_URL"; then
+        log_error "Failed to download input segment from presigned URL"
+        exit 1
+    fi
+    
+    local download_end
+    download_end=$(date +%s)
+    local download_duration=$((download_end - download_start))
+    log_info "Input downloaded in ${download_duration} seconds"
+    log_metric "input_download_duration_seconds" "$download_duration"
     
     # Verify file was downloaded
     if [[ ! -f "$INPUT_FILE" ]]; then
@@ -314,12 +290,21 @@ main() {
     log_info "Output segment file size: ${output_size} bytes"
     log_metric "output_segment_size_bytes" "$output_size"
     
-    # Upload upscaled segment to S3
-    log_info "Uploading upscaled segment to S3..."
-    if ! aws s3 cp "$OUTPUT_FILE" "$OUTPUT_SEGMENT_S3_URI" --sse AES256; then
-        log_error "Failed to upload segment to: $OUTPUT_SEGMENT_S3_URI"
+    # Upload upscaled segment using presigned URL
+    log_info "Uploading upscaled segment..."
+    local upload_start
+    upload_start=$(date +%s)
+    
+    if ! curl -fsSL --retry 3 --retry-delay 2 -X PUT -T "$OUTPUT_FILE" -H "Content-Type: video/mp4" "$OUTPUT_PRESIGNED_URL"; then
+        log_error "Failed to upload segment using presigned URL"
         exit 1
     fi
+    
+    local upload_end
+    upload_end=$(date +%s)
+    local upload_duration=$((upload_end - upload_start))
+    log_info "Output uploaded in ${upload_duration} seconds"
+    log_metric "output_upload_duration_seconds" "$upload_duration"
     
     echo "============================================================================"
     echo "✅ Video upscaling completed successfully"
@@ -328,7 +313,7 @@ main() {
     log_info "  Processing time: ${duration}s"
     log_info "  Input size: ${file_size} bytes"
     log_info "  Output size: ${output_size} bytes"
-    log_info "  Output location: $OUTPUT_SEGMENT_S3_URI"
+    log_info "  Upload time: ${upload_duration}s"
     log_metric "job_status" "success"
     echo "============================================================================"
 }

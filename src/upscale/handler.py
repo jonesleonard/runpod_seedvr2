@@ -23,39 +23,36 @@ def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
     
     Expected job_input:
     {
-        "input_s3_uri": "s3://bucket/path/to/segment.mp4",
-        "output_s3_uri": "s3://bucket/path/to/output.mp4",
+        "input_presigned_url": "https://bucket.s3.../segment.mp4?X-Amz-...",
+        "output_presigned_url": "https://bucket.s3.../output.mp4?X-Amz-...",
         "params": {
             "model": "7b",
             "resolution": 1080,
-            "batch_size": 129,
             "seed": 42,
             ...
         }
     }
+    
+    Models are loaded from the network volume mounted at /runpod-volume/models.
     """
     start_time = time.time()
     
     try:
-        # Validate input
-        input_s3_uri = job_input.get("input_s3_uri")
-        output_s3_uri = job_input.get("output_s3_uri")
+        # Validate input - now using presigned URLs instead of S3 URIs
+        input_presigned_url = job_input.get("input_presigned_url")
+        output_presigned_url = job_input.get("output_presigned_url")
         params = job_input.get("params", {})
         
-        if not input_s3_uri or not output_s3_uri:
-            raise ValueError("input_s3_uri and output_s3_uri are required")
+        if not input_presigned_url or not output_presigned_url:
+            raise ValueError("input_presigned_url and output_presigned_url are required")
         
-        logger.info(f"Starting upscale job: {input_s3_uri} -> {output_s3_uri}")
-
-        if "models_s3_prefix" not in params or not params["models_s3_prefix"]:
-            raise ValueError("params.models_s3_prefix is required")
+        logger.info("Starting upscale job with presigned URLs")
         
         # Build environment variables for the shell script
         env = os.environ.copy()
         env.update({
-            "INPUT_SEGMENT_S3_URI": input_s3_uri,
-            "OUTPUT_SEGMENT_S3_URI": output_s3_uri,
-            "MODELS_S3_PREFIX": params.get("models_s3_prefix")
+            "INPUT_PRESIGNED_URL": input_presigned_url,
+            "OUTPUT_PRESIGNED_URL": output_presigned_url,
         })
         
         # Map params to environment variables

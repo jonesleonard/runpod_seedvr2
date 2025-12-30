@@ -28,7 +28,8 @@ def update_endpoint(
     idle_timeout: Optional[int] = None,
     execution_timeout_ms: Optional[int] = None,
     scaler_type: Optional[str] = None,
-    scaler_value: Optional[int] = None
+    scaler_value: Optional[int] = None,
+    network_volume_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Update an existing endpoint using the REST API.
@@ -45,6 +46,7 @@ def update_endpoint(
         execution_timeout_ms: Execution timeout in milliseconds (optional)
         scaler_type: Scaler type (e.g., "QUEUE_DELAY") (optional)
         scaler_value: Scaler value (optional)
+        network_volume_id: Network volume ID for persistent storage (optional)
     
     Returns:
         dict: Response from RunPod API
@@ -84,6 +86,8 @@ def update_endpoint(
         payload["scalerType"] = scaler_type
     if scaler_value is not None:
         payload["scalerValue"] = scaler_value
+    if network_volume_id is not None:
+        payload["networkVolumeId"] = network_volume_id
     
     logger.info(f"Updating endpoint {endpoint_id} with template {template_id}")
     logger.debug(f"Payload: {payload}")
