@@ -9,10 +9,12 @@ import os
 import sys
 import argparse
 import logging
+import traceback
 from typing import Optional
 import runpod
 from find_template_by_id import template_exists
 from update_template_by_id import update_template
+from find_template_by_name import find_template_by_name
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -55,26 +57,21 @@ def create_template(
     template_config = {
         "name": name,
         "image_name": image,
-        "docker_start_cmd": "",  # Add any docker start command if needed
         "container_disk_in_gb": 20,  # Adjust based on your needs
         "volume_in_gb": 50,  # Storage for models and temporary files
         "volume_mount_path": "/work",
-        "ports": "",  # Not needed for serverless
-        "env": {}
+        "is_serverless": is_serverless
     }
     
     # Add environment variables if provided
     if env_vars:
         template_config["env"] = env_vars
     
-    # Add serverless-specific configuration
-    if is_serverless:
-        template_config["is_serverless"] = True
-    
     try:
         # Initialize RunPod with API key
         runpod.api_key = api_key
         
+        # Check if template_id is provided
         if template_id:
             # Check if template exists before updating
             if not template_exists(template_id, api_key):
@@ -83,6 +80,15 @@ def create_template(
                     "Creating new template instead."
                 )
                 template_id = None
+        else:
+            # No template_id provided, search by name
+            existing_template = find_template_by_name(name, api_key)
+            if existing_template:
+                template_id = existing_template.get("id")
+                logger.info(
+                    f"Found existing template '{name}' with ID: {template_id}. "
+                    "Will update it."
+                )
         
         if template_id: 
             # Update existing template using REST API
@@ -94,7 +100,7 @@ def create_template(
                 container_disk_in_gb=template_config["container_disk_in_gb"],
                 volume_in_gb=template_config["volume_in_gb"],
                 volume_mount_path=template_config["volume_mount_path"],
-                env=template_config["env"] if template_config["env"] else None,
+                env=template_config.get('env', None),
                 api_key=api_key)
         else:
             # Create new template
@@ -108,6 +114,7 @@ def create_template(
     
     except Exception as e:
         logger.error(f"Failed to create/update template: {e}")
+        logger.error("".join(traceback.format_exc()))
         raise
 
 
@@ -192,10 +199,13 @@ Environment Variables:
     # Parse environment variables
     env_vars = {}
     if args.env:
+        logger.info("Setting environment variables:")
         for env_pair in args.env:
+            logger.info(f"  {env_pair}")
             try:
                 key, value = env_pair.split("=", 1)
                 env_vars[key] = value
+                logger.info(f"  Parsed: {key}={value}")
             except ValueError:
                 logger.error(f"Invalid environment variable format: {env_pair}")
                 sys.exit(1)

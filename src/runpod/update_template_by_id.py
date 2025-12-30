@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-RUNPOD_API_BASE = os.environ.get("RUNPOD_API_BASE_URL")
+RUNPOD_REST_API_BASE_URL = os.environ.get("RUNPOD_REST_API_BASE_URL")
 
 def update_template(
     template_id: str,
@@ -68,7 +68,7 @@ def update_template(
                 "environment variable must be set"
             )
     
-    url = f"{RUNPOD_API_BASE}/templates/{template_id}"
+    url = f"{RUNPOD_REST_API_BASE_URL}/templates/{template_id}"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"

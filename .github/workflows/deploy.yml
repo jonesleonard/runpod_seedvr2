@@ -48,7 +48,7 @@ jobs:
     needs: build-and-push
     uses: ./.github/workflows/runpod-template.yml
     with:
-      runpod_api_base_url: ${{ vars.RUNPOD_API_BASE_URL }}
+      runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
       python_version: ${{ vars.PYTHON_VERSION }}
       full_image_name: ${{ needs.build-and-push.outputs.full_image_name }}
       template_name: 'seedvr2_upscaler'
