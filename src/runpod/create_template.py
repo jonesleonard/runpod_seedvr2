@@ -179,23 +179,23 @@ Environment Variables:
     
     args = parser.parse_args()
     
+    # Check if template exists and handle --create-if-not-exists flag
+    if args.create_if_not_exists and args.template_id:
+        api_key = os.environ.get("RUNPOD_API_KEY")
+        if template_exists(args.template_id, api_key):
+            logger.info(
+                f"Template {args.template_id} already exists. "
+                "Skipping creation (--create-if-not-exists flag set)."
+            )
+            sys.exit(0)
+    
     # Parse environment variables
     env_vars = {}
     if args.env:
         for env_pair in args.env:
             try:
                 key, value = env_pair.split("=", 1)
-                # Check if template exists and handle --create-if-not-exists flag
-                if args.create_if_not_exists and args.template_id:
-                    api_key = os.environ.get("RUNPOD_API_KEY")
-                    if template_exists(args.template_id, api_key):
-                        logger.info(
-                            f"Template {args.template_id} already exists. "
-                            "Skipping creation (--create-if-not-exists flag set)."
-                        )
-                        sys.exit(0)
-                
-                        env_vars[key] = value
+                env_vars[key] = value
             except ValueError:
                 logger.error(f"Invalid environment variable format: {env_pair}")
                 sys.exit(1)
