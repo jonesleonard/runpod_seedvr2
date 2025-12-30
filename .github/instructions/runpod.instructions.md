@@ -7,7 +7,7 @@ applyTo: 'src/runpod/**,src/**/handler.py'
 
 Comprehensive instructions for developing serverless functions and handlers for the RunPod platform, covering API key management, handler patterns, job processing, error handling, and optimization.
 
-use the #searchRunpodDocumentation for looking up documentation.
+use the "#tool:runpod-documentation/SearchRunpodDocumentation" for looking up documentation and guidelines when needed.
 
 ## Project Context
 
