@@ -176,6 +176,8 @@ def main() -> int:
         "params": params
     }
 
+    payload = {"input": payload}
+
     api_key = args.runpod_api_key or config.get("runpod_api_key") or os.environ.get("RUNPOD_API_KEY")
     if api_key:
         runpod.api_key = api_key

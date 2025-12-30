@@ -96,6 +96,11 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
     start_time = time.time()
     
     try:
+
+        # debug log full job
+        logger.debug(f"Received job: {json.dumps(job, indent=2)}")
+
+        # Support both "input" wrapper and direct job dict
         job_input = job.get("input", job)
 
         # Validate input - now using presigned URLs instead of S3 URIs
