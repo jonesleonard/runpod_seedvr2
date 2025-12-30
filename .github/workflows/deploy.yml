@@ -35,6 +35,9 @@ jobs:
   deploy-network-volume-models:
     name: Deploy Network Volume and Models
     uses: ./.github/workflows/deploy-network-volume-models.yml
+    permissions:
+      contents: read
+      id-token: write
     with:
       runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
       network_volume_name: 'seedvr2-models-volume'
