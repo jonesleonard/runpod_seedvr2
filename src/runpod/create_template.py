@@ -19,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 def create_template(
     name: str,
-    image_name: str,
-    docker_tag: str = "latest",
-    dockerhub_username: Optional[str] = None,
+    full_image_name: str,
     is_serverless: bool = True,
     env_vars: Optional[dict] = None,
     template_id: Optional[str] = None
@@ -30,10 +28,8 @@ def create_template(
     Create or update a RunPod template.
     
     Args:
-        name: Template name (e.g., "SeedVR2 Video Upscaler")
-        image_name: Docker image name (e.g., "seedvr2-upscaler")
-        docker_tag: Docker image tag (default: "latest")
-        dockerhub_username: DockerHub username (will use env var if not provided)
+        name: Template name 
+        full_image_name: Docker image name (e.g., "repository/image-name:latest")
         is_serverless: Whether this is a serverless template (default: True)
         env_vars: Optional environment variables for the template
         template_id: If provided, updates existing template instead of creating new
@@ -46,21 +42,20 @@ def create_template(
     if not api_key:
         raise ValueError("RUNPOD_API_KEY environment variable is required")
     
-    # Get DockerHub username from environment if not provided
-    if not dockerhub_username:
-        dockerhub_username = os.environ.get("DOCKERHUB_USERNAME")
-        if not dockerhub_username:
-            raise ValueError("dockerhub_username must be provided or DOCKERHUB_USERNAME env var must be set")
+    # Get full image name from environment if not provided
+    if not full_image_name:
+        full_image_name = os.environ.get("FULL_IMAGE_NAME")
+        if not full_image_name:
+            raise ValueError("FULL_IMAGE_NAME environment variable must be set")
     
     # Construct full image name
-    full_image = f"{dockerhub_username}/{image_name}:{docker_tag}"
     
-    logger.info(f"Creating/updating RunPod template for image: {full_image}")
+    logger.info(f"Creating/updating RunPod template for image: {full_image_name}")
     
     # Prepare template configuration
     template_config = {
         "name": name,
-        "imageName": full_image,
+        "imageName": full_image_name,
         "dockerArgs": "",  # Add any docker arguments if needed
         "containerDiskInGb": 20,  # Adjust based on your needs
         "volumeInGb": 50,  # Storage for models and temporary files
@@ -133,7 +128,7 @@ Examples:
   
 Environment Variables:
   RUNPOD_API_KEY      - Your RunPod API key (required)
-  DOCKERHUB_USERNAME  - Your DockerHub username (required if not specified with --username)
+  FULL_IMAGE_NAME     - Full Docker image name (required if not specified with --image)
         """
     )
     
@@ -148,18 +143,7 @@ Environment Variables:
         default="seedvr2-upscaler",
         help="Docker image name (default: 'seedvr2-upscaler')"
     )
-    
-    parser.add_argument(
-        "--tag",
-        default="latest",
-        help="Docker image tag (default: 'latest')"
-    )
-    
-    parser.add_argument(
-        "--username",
-        help="DockerHub username (uses DOCKERHUB_USERNAME env var if not specified)"
-    )
-    
+
     parser.add_argument(
         "--template-id",
         help="Existing template ID to update (creates new if not specified)"
@@ -218,9 +202,7 @@ Environment Variables:
     try:
         result = create_template(
             name=args.name,
-            image_name=args.image,
-            docker_tag=args.tag,
-            dockerhub_username=args.username,
+            full_image_name=args.full_image_name,
             env_vars=env_vars if env_vars else None,
             template_id=args.template_id
         )

@@ -36,11 +36,11 @@ jobs:
     name: Build and Push Docker Image
     uses: ./.github/workflows/docker-build-push.yml
     with:
+      dockerhub_username: ${{ vars.DOCKERHUB_USERNAME }}
       image_name: ${{ vars.UPSCALER_IMAGE_NAME }}
       tag: ${{ github.event.inputs.tag || 'latest' }}
       seedvr2_ref: ${{ github.event.inputs.seedvr2_ref || vars.SEEDVR2_REF || 'v2.5.23' }}
     secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   
   create-runpod-template:
@@ -48,9 +48,9 @@ jobs:
     needs: build-and-push
     uses: ./.github/workflows/runpod-template.yml
     with:
-      python_version: '3.13'
+      python_version: ${{ vars.PYTHON_VERSION }}
       full_image_name: ${{ needs.build-and-push.outputs.full_image_name }}
-      template_name: 'SeedVR2 Video Upscaler'
+      template_name: 'seedvr2_upscaler'
     secrets:
       RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
       RUNPOD_TEMPLATE_ID: ${{ secrets.RUNPOD_TEMPLATE_ID }}
