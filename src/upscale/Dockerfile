@@ -13,11 +13,11 @@ RUN pip3 install --no-cache-dir --root-user-action=ignore --upgrade pip setuptoo
 
 # Install PyTorch with CUDA support
 RUN pip3 install --no-cache-dir --root-user-action=ignore --pre torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/nightly/cu121
+    --index-url https://download.pytorch.org/whl/cu121
 
 # Install SeedVR2
 ARG SEEDVR2_REPO="https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git"
-ARG SEEDVR2_REF="main"
+ARG SEEDVR2_REF="v2.5.23"
 
 RUN git clone "$SEEDVR2_REPO" /opt/seedvr2 \
     && cd /opt/seedvr2 \
