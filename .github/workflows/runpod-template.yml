@@ -101,16 +101,8 @@ jobs:
           ARGS=(
             --name "${{ env.TEMPLATE_NAME }}"
             --image "${{ env.FULL_IMAGE_NAME }}"
+            --create-if-not-exists
           )
-          
-          # Add template ID if it exists
-          if [ -n "${{ secrets.RUNPOD_TEMPLATE_ID }}" ]; then
-            ARGS+=(--template-id "${{ secrets.RUNPOD_TEMPLATE_ID }}")
-            ARGS+=(--create-if-not-exists)
-            echo "Will create template ${{ secrets.RUNPOD_TEMPLATE_ID }} if it doesn't exist, skip if it does"
-          else
-            echo "Creating new template"
-          fi
           
           python src/runpod/create_template.py "${ARGS[@]}"
       
