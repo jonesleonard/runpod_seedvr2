@@ -9,19 +9,18 @@ on:
         type: string
       image_name:
         description: 'Docker image name'
-        required: false
+        required: true
         type: string
-        default: 'seedvr2-upscaler'
       tag:
         description: 'Docker image tag (default: latest)'
         required: false
         type: string
         default: 'latest'
-      seedvr2_ref:
-        description: 'SeedVR2 version to use'
+      build_args:
+        description: 'Additional build arguments for Docker build'
         required: false
         type: string
-        default: 'v2.5.23'
+        default: ''
       build_context:
         description: 'Docker build context'
         required: false
@@ -98,9 +97,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          build-args: |
-            SEEDVR2_REPO=${{ vars.SEEDVR2_REPO }}
-            SEEDVR2_REF=${{ inputs.seedvr2_ref || vars.SEEDVR2_REF }}
+          build-args: ${{ inputs.build_args }}
       
       - name: Extract Docker tag for output
         id: docker-tag
@@ -114,3 +111,4 @@ jobs:
           echo "Built and pushed: ${FIRST_TAG}"
           echo "Digest: ${{ steps.build.outputs.digest }}"
           echo "Image ID: ${{ steps.build.outputs.imageid }}"
+          echo "Full Image Name: ${FIRST_TAG}"

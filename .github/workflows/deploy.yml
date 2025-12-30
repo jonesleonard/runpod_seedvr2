@@ -64,7 +64,9 @@ jobs:
       dockerhub_username: ${{ vars.DOCKERHUB_USERNAME }}
       image_name: ${{ vars.UPSCALER_IMAGE_NAME }}
       tag: ${{ github.event.inputs.tag || 'latest' }}
-      seedvr2_ref: ${{ github.event.inputs.seedvr2_ref || vars.SEEDVR2_REF || 'v2.5.23' }}
+      build_args: |
+        SEEDVR2_REPO=${{ vars.SEEDVR2_REPO }}
+        SEEDVR2_REF=${{ inputs.seedvr2_ref || vars.SEEDVR2_REF }}
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   
