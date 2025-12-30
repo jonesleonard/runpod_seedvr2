@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def create_template(
     name: str,
-    full_image_name: str,
+    image: str,
     is_serverless: bool = True,
     env_vars: Optional[dict] = None,
     template_id: Optional[str] = None
@@ -29,7 +29,7 @@ def create_template(
     
     Args:
         name: Template name 
-        full_image_name: Docker image name (e.g., "repository/image-name:latest")
+        image: Docker image name (e.g., "repository/image-name:latest")
         is_serverless: Whether this is a serverless template (default: True)
         env_vars: Optional environment variables for the template
         template_id: If provided, updates existing template instead of creating new
@@ -43,17 +43,17 @@ def create_template(
         raise ValueError("RUNPOD_API_KEY environment variable is required")
     
     # Get full image name from environment if not provided
-    if not full_image_name:
-        full_image_name = os.environ.get("FULL_IMAGE_NAME")
-        if not full_image_name:
-            raise ValueError("FULL_IMAGE_NAME environment variable must be set")
+    if not image:
+        image = os.environ.get("IMAGE")
+        if not image:
+            raise ValueError("IMAGE environment variable must be set")
         
-    logger.info(f"Creating/updating RunPod template for image: {full_image_name}")
+    logger.info(f"Creating/updating RunPod template for image: {image}")
     
     # Prepare template configuration
     template_config = {
         "name": name,
-        "imageName": full_image_name,
+        "imageName": image,
         "dockerArgs": "",  # Add any docker arguments if needed
         "containerDiskInGb": 20,  # Adjust based on your needs
         "volumeInGb": 50,  # Storage for models and temporary files
@@ -126,7 +126,7 @@ Examples:
   
 Environment Variables:
   RUNPOD_API_KEY      - Your RunPod API key (required)
-  FULL_IMAGE_NAME     - Full Docker image name (required if not specified with --image)
+  IMAGE     - Full Docker image name (required if not specified with --image)
         """
     )
     
@@ -200,7 +200,7 @@ Environment Variables:
     try:
         result = create_template(
             name=args.name,
-            full_image_name=args.full_image_name,
+            image=args.image,
             env_vars=env_vars if env_vars else None,
             template_id=args.template_id
         )
