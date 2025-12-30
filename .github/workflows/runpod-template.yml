@@ -90,7 +90,7 @@ jobs:
           
           ARGS=(
             --name "${{ env.TEMPLATE_NAME }}"
-            --full_image_name "${FULL_IMAGE}"
+            --image "${{ env.FULL_IMAGE_NAME }}"
           )
           
           # Add template ID if it exists

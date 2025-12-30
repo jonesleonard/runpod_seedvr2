@@ -47,9 +47,7 @@ def create_template(
         full_image_name = os.environ.get("FULL_IMAGE_NAME")
         if not full_image_name:
             raise ValueError("FULL_IMAGE_NAME environment variable must be set")
-    
-    # Construct full image name
-    
+        
     logger.info(f"Creating/updating RunPod template for image: {full_image_name}")
     
     # Prepare template configuration
