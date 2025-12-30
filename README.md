@@ -210,23 +210,7 @@ The workflow intelligently manages RunPod templates:
 **First-time setup:**
 
 1. Push to `main` or manually trigger the `deploy.yml` workflow
-2. The workflow creates a new template automatically
-3. Check the "Create/Update RunPod Template" job logs for the template ID
-4. Add it as `RUNPOD_TEMPLATE_ID` secret in your repository settings
-
-**Template Management Behavior:**
-
-- **No `RUNPOD_TEMPLATE_ID` set**: Creates a new template on every run
-- **`RUNPOD_TEMPLATE_ID` set**:
-  - Checks if template exists using RunPod REST API
-  - If exists: Skips update (template is stable, no changes needed)
-  - If not exists: Creates the template with the specified ID
-  
-This approach ensures:
-
-- Templates are created once and remain consistent
-- No accidental overwrites of existing templates
-- Idempotent deployments (safe to run multiple times)
+2. The workflow creates a new template or updates the existing one automatically
 
 **To force update an existing template:**
 
@@ -239,7 +223,6 @@ Set these in your GitHub repository settings (Settings → Secrets and variables
 - `DOCKERHUB_USERNAME` - Your DockerHub username
 - `DOCKERHUB_TOKEN` - Your DockerHub access token
 - `RUNPOD_API_KEY` - Your RunPod API key (required for template creation)
-- `RUNPOD_TEMPLATE_ID` - (Optional) Existing template ID to update instead of creating new
 
 ### Running Individual Workflows
 

@@ -54,4 +54,3 @@ jobs:
       template_name: 'seedvr2_upscaler'
     secrets:
       RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
-      RUNPOD_TEMPLATE_ID: ${{ secrets.RUNPOD_TEMPLATE_ID }}

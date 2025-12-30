@@ -24,8 +24,6 @@ on:
     secrets:
       RUNPOD_API_KEY:
         required: true
-      RUNPOD_TEMPLATE_ID:
-        required: false
   workflow_dispatch:
     inputs:
       image_name:
@@ -104,13 +102,11 @@ jobs:
             --create-if-not-exists
           )
           
-          python src/runpod/template/create_template.py "${ARGS[@]}"
+          export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}/src"
+          python -m runpod.template.create_template "${ARGS[@]}"
       
       - name: Template creation result
         if: success()
         run: |
           echo "✓ RunPod template successfully created/updated"
           echo "Image: ${{ env.FULL_IMAGE_NAME }}"
-          echo ""
-          echo "If this was a new template, check the logs above for the template ID"
-          echo "and add it as RUNPOD_TEMPLATE_ID secret to update the same template in future runs."

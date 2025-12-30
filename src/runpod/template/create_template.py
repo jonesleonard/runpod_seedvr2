@@ -12,9 +12,9 @@ import logging
 import traceback
 from typing import Optional
 import runpod
-from .find_template_by_id import template_exists
-from .update_template_by_id import update_template
-from .find_template_by_name import find_template_by_name
+from runpod.template.find_template_by_id import template_exists
+from runpod.template.update_template_by_id import update_template
+from runpod.template.find_template_by_name import find_template_by_name
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
