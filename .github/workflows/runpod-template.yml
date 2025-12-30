@@ -85,10 +85,10 @@ jobs:
           )
           
           export PYTHONPATH="${GITHUB_WORKSPACE}/src"
-          python -m runpod_mgmt.template.create_template "${ARGS[@]}"
+          TEMPLATE_ID=$(python -m runpod_mgmt.template.create_template "${ARGS[@]}")
           
-          echo "template_id="${TEMPLATE_ID}"
-          echo "template_id="${TEMPLATE_ID}" >> "$GITHUB_OUTPUT"
+          echo "Template ID: ${TEMPLATE_ID}"
+          echo "template_id=${TEMPLATE_ID}" >> "$GITHUB_OUTPUT"
       
       - name: Template creation result
         if: success()
