@@ -48,6 +48,7 @@ jobs:
     needs: build-and-push
     uses: ./.github/workflows/runpod-template.yml
     with:
+      python_version: '3.13'
       full_image_name: ${{ needs.build-and-push.outputs.full_image_name }}
       template_name: 'SeedVR2 Video Upscaler'
     secrets:

@@ -11,6 +11,7 @@ import argparse
 import logging
 from typing import Optional
 import runpod
+from find_template_by_id import template_exists
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -87,6 +88,15 @@ def create_template(
         runpod.api_key = api_key
         
         if template_id:
+            # Check if template exists before updating
+            if not template_exists(template_id, api_key):
+                logger.warning(
+                    f"Template ID {template_id} does not exist. "
+                    "Creating new template instead."
+                )
+                template_id = None
+        
+        if template_id:
             # Update existing template
             logger.info(f"Updating template ID: {template_id}")
             response = runpod.update_template(template_id, **template_config)
@@ -156,6 +166,12 @@ Environment Variables:
     )
     
     parser.add_argument(
+        "--create-if-not-exists",
+        action="store_true",
+        help="Only create template if it doesn't exist (skip update)"
+    )
+    
+    parser.add_argument(
         "--env",
         action="append",
         metavar="KEY=VALUE",
@@ -184,7 +200,17 @@ Environment Variables:
         for env_pair in args.env:
             try:
                 key, value = env_pair.split("=", 1)
-                env_vars[key] = value
+                # Check if template exists and handle --create-if-not-exists flag
+                if args.create_if_not_exists and args.template_id:
+                    api_key = os.environ.get("RUNPOD_API_KEY")
+                    if template_exists(args.template_id, api_key):
+                        logger.info(
+                            f"Template {args.template_id} already exists. "
+                            "Skipping creation (--create-if-not-exists flag set)."
+                        )
+                        sys.exit(0)
+                
+                        env_vars[key] = value
             except ValueError:
                 logger.error(f"Invalid environment variable format: {env_pair}")
                 sys.exit(1)

@@ -13,7 +13,7 @@ This project provides a RunPod serverless handler for video upscaling using the 
 
 ## Project Structure
 
-```
+```text
 .
 ├── src/
 │   ├── upscale/
@@ -75,6 +75,23 @@ python src/runpod/create_template.py \
   --name "SeedVR2 Video Upscaler" \
   --image seedvr2-upscaler \
   --tag latest
+```
+
+**Check if a template exists:**
+
+```bash
+python src/runpod/find_template_by_id.py YOUR_TEMPLATE_ID
+```
+
+**Create only if template doesn't exist:**
+
+```bash
+python src/runpod/create_template.py \
+  --template-id YOUR_TEMPLATE_ID \
+  --name "SeedVR2 Video Upscaler" \
+  --image seedvr2-upscaler \
+  --tag latest \
+  --create-if-not-exists
 ```
 
 **With custom configuration:**
@@ -156,7 +173,8 @@ The project uses a modular GitHub Actions pipeline with three workflows:
 
 3. **[runpod-template.yml](.github/workflows/runpod-template.yml)** - Reusable workflow for RunPod management
    - Creates or updates RunPod templates
-   - Uses the image tag from the build workflow
+   - Checks template existence before operations
+   - Uses the full image name from the build workflow
    - Can be called independently or as part of the parent workflow
 
 ### Workflow Triggers
@@ -174,7 +192,7 @@ The project uses a modular GitHub Actions pipeline with three workflows:
 
 ### Automated Template Management
 
-After each successful Docker image build and push, the workflow automatically creates or updates your RunPod template with the latest image tag.
+The workflow intelligently manages RunPod templates:
 
 **First-time setup:**
 
@@ -183,10 +201,23 @@ After each successful Docker image build and push, the workflow automatically cr
 3. Check the "Create/Update RunPod Template" job logs for the template ID
 4. Add it as `RUNPOD_TEMPLATE_ID` secret in your repository settings
 
-**Subsequent runs:**
+**Template Management Behavior:**
 
-- If `RUNPOD_TEMPLATE_ID` is set, updates the existing template
-- If not set, creates a new template each time
+- **No `RUNPOD_TEMPLATE_ID` set**: Creates a new template on every run
+- **`RUNPOD_TEMPLATE_ID` set**:
+  - Checks if template exists using RunPod REST API
+  - If exists: Skips update (template is stable, no changes needed)
+  - If not exists: Creates the template with the specified ID
+  
+This approach ensures:
+
+- Templates are created once and remain consistent
+- No accidental overwrites of existing templates
+- Idempotent deployments (safe to run multiple times)
+
+**To force update an existing template:**
+
+Run the `create_template.py` script manually without the `--create-if-not-exists` flag.
 
 ### Secrets Required
 
@@ -203,22 +234,16 @@ You can run each workflow independently:
 
 **Build Docker image only:**
 
-```
 Actions → Build and Push Docker Image → Run workflow
-```
 
 **Update RunPod template only:**
 
-```
 Actions → Create or Update RunPod Template → Run workflow
 (Requires: image_name, image_tag, dockerhub_username)
-```
 
 **Full deployment:**
 
-```
 Actions → Build, Push, and Deploy → Run workflow
-```
 
 ## Development
 
@@ -242,4 +267,4 @@ docker run --gpus all \
 
 ## License
 
-[Add your license here]
+TBD

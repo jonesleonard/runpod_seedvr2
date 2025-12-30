@@ -11,7 +11,12 @@ on:
         description: 'RunPod template name'
         required: false
         type: string
-        default: 'SeedVR2 Video Upscaler'
+        default: 'seedvr2_upscaler'
+      python_version:
+        description: 'Python version to use in the RunPod template'
+        required: false
+        type: string
+        default: '3.13'
     secrets:
       RUNPOD_API_KEY:
         required: true
@@ -31,6 +36,11 @@ on:
         description: 'RunPod template name'
         required: false
         default: 'SeedVR2 Video Upscaler'
+      python_version:
+        description: 'Python version to use in the RunPod template'
+        required: false
+        type: string
+        default: '3.13'
 
 env:
   FULL_IMAGE_NAME: ${{ inputs.full_image_name }}
@@ -50,11 +60,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ inputs.python_version }}
           cache: 'pip'
+          cache-dependency-path: 'src/runpod/requirements.txt'
       
-      - name: Install RunPod SDK
-        run: pip install runpod
+      - name: Install dependencies
+        run: pip install -r src/runpod/requirements.txt
       
       - name: Create or update RunPod template
         env:
@@ -64,12 +75,16 @@ jobs:
           
           # Split full image name into components
           FULL_IMAGE="${{ env.FULL_IMAGE_NAME }}"
+
           # Extract username/image (everything before the last colon)
           IMAGE_WITH_USER="${FULL_IMAGE%:*}"
+          
           # Extract tag (everything after the last colon)
           TAG="${FULL_IMAGE##*:}"
+          
           # Extract just the image name (after the /)
           IMAGE_NAME="${IMAGE_WITH_USER##*/}"
+
           # Extract username (before the /)
           USERNAME="${IMAGE_WITH_USER%/*}"
           
@@ -83,7 +98,8 @@ jobs:
           # Add template ID if it exists
           if [ -n "${{ secrets.RUNPOD_TEMPLATE_ID }}" ]; then
             ARGS+=(--template-id "${{ secrets.RUNPOD_TEMPLATE_ID }}")
-            echo "Updating existing template: ${{ secrets.RUNPOD_TEMPLATE_ID }}"
+            ARGS+=(--create-if-not-exists)
+            echo "Will create template ${{ secrets.RUNPOD_TEMPLATE_ID }} if it doesn't exist, skip if it does"
           else
             echo "Creating new template"
           fi
