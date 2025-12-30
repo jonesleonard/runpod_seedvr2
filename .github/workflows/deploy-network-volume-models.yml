@@ -195,7 +195,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-push:
+  build-and-push-model-download:
     name: Build and Push Model Download Image
     uses: ./.github/workflows/docker-build-push.yml
     with:
@@ -207,14 +207,14 @@ jobs:
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  create-update-template:
+  create-update-template-model-download:
     name: Create/Update RunPod Template (Model Download)
-    needs: build-and-push
+    needs: build-and-push-model-download
     uses: ./.github/workflows/runpod-template.yml
     with:
       runpod_rest_api_base_url: ${{ inputs.runpod_rest_api_base_url }}
       python_version: ${{ inputs.python_version }}
-      full_image_name: ${{ needs.build-and-push.outputs.full_image_name }}
+      full_image_name: ${{ needs.build-and-push-model-download.outputs.full_image_name }}
       template_name: ${{ inputs.template_name }}
       is_serverless: false
     secrets:
@@ -267,15 +267,15 @@ jobs:
   create-pod:
     name: Create RunPod Pod (Model Download)
     needs:
-      - create-update-template
+      - create-update-template-model-download
       - create-update-network-volume
-      - build-and-push
+      - build-and-push-model-download
       - presign-model-urls
     uses: ./.github/workflows/runpod-pod.yml
     with:
       pod_name: ${{ inputs.pod_name }}
-      template_id: ${{ needs.create-update-template.outputs.template_id }}
-      image_name: ${{ needs.build-and-push.outputs.full_image_name }}
+      template_id: ${{ needs.create-update-template-model-download.outputs.template_id }}
+      image_name: ${{ needs.build-and-push-model-download.outputs.full_image_name }}
       gpu_type_id: ${{ inputs.gpu_type_id }}
       data_center_id: ${{ inputs.data_center_id }}
       network_volume_id: ${{ needs.create-update-network-volume.outputs.network_volume_id }}

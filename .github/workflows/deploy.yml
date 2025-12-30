@@ -51,9 +51,12 @@ jobs:
       python_version: ${{ vars.PYTHON_VERSION }}
     secrets:
       RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
   build-and-push:
     name: Build and Push Docker Image
     uses: ./.github/workflows/docker-build-push.yml
+    needs: deploy-network-volume-models
     with:
       dockerhub_username: ${{ vars.DOCKERHUB_USERNAME }}
       image_name: ${{ vars.UPSCALER_IMAGE_NAME }}
