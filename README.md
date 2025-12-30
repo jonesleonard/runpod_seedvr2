@@ -22,11 +22,18 @@ This project provides a RunPod serverless handler for video upscaling using the 
 │   │   ├── requirements.txt    # Python dependencies
 │   │   └── upscale_segment.sh  # Shell script for video processing
 │   └── runpod/
-│       ├── create_template.py  # Script to create RunPod template
-│       └── create_endpoint.py  # Script to create RunPod endpoint
+│       ├── template/
+│       │   ├── create_template.py       # Create/update RunPod templates
+│       │   ├── find_template_by_id.py   # Find template by ID
+│       │   ├── find_template_by_name.py # Find template by name
+│       │   └── update_template_by_id.py # Update template via REST API
+│       └── endpoint/
+│           └── create_endpoint.py       # Create RunPod endpoints
 └── .github/
     └── workflows/
-        └── docker-build-push.yml  # CI/CD for Docker image
+        ├── deploy.yml               # Parent workflow (orchestrates build + deploy)
+        ├── docker-build-push.yml    # Reusable: Docker build and push
+        └── runpod-template.yml      # Reusable: RunPod template management
 ```
 
 ## Setup
@@ -71,7 +78,7 @@ docker push $DOCKERHUB_USERNAME/seedvr2-upscaler:latest
 After your Docker image is pushed, create a RunPod template:
 
 ```bash
-python src/runpod/create_template.py \
+python src/runpod/template/create_template.py \
   --name "SeedVR2 Video Upscaler" \
   --image seedvr2-upscaler \
   --tag latest
@@ -80,13 +87,19 @@ python src/runpod/create_template.py \
 **Check if a template exists:**
 
 ```bash
-python src/runpod/find_template_by_id.py YOUR_TEMPLATE_ID
+python src/runpod/template/find_template_by_id.py YOUR_TEMPLATE_ID
+```
+
+**Find template by name:**
+
+```bash
+python src/runpod/template/find_template_by_name.py "SeedVR2 Video Upscaler"
 ```
 
 **Create only if template doesn't exist:**
 
 ```bash
-python src/runpod/create_template.py \
+python src/runpod/template/create_template.py \
   --template-id YOUR_TEMPLATE_ID \
   --name "SeedVR2 Video Upscaler" \
   --image seedvr2-upscaler \
@@ -97,7 +110,7 @@ python src/runpod/create_template.py \
 **With custom configuration:**
 
 ```bash
-python src/runpod/create_template.py \
+python src/runpod/template/create_template.py \
   --name "SeedVR2 Video Upscaler" \
   --image seedvr2-upscaler \
   --tag v1.0.0 \
@@ -109,7 +122,7 @@ python src/runpod/create_template.py \
 **Update existing template:**
 
 ```bash
-python src/runpod/create_template.py \
+python src/runpod/template/create_template.py \
   --template-id YOUR_TEMPLATE_ID \
   --tag latest
 ```

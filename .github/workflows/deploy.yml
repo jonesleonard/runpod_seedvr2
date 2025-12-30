@@ -43,7 +43,7 @@ jobs:
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   
-  create-runpod-template:
+  create-update-runpod-template:
     name: Create/Update RunPod Template
     needs: build-and-push
     uses: ./.github/workflows/runpod-template.yml

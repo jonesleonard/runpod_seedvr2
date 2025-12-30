@@ -104,7 +104,7 @@ jobs:
             --create-if-not-exists
           )
           
-          python src/runpod/create_template.py "${ARGS[@]}"
+          python src/runpod/template/create_template.py "${ARGS[@]}"
       
       - name: Template creation result
         if: success()
