@@ -6,13 +6,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI
-RUN pip3 install --no-cache-dir awscli
+RUN pip3 install --no-cache-dir --root-user-action=ignore awscli
 
 # Upgrade pip
-RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip3 install --no-cache-dir --root-user-action=ignore --upgrade pip setuptools wheel
 
 # Install PyTorch with CUDA support
-RUN pip3 install --no-cache-dir --pre torch torchvision torchaudio \
+RUN pip3 install --no-cache-dir --root-user-action=ignore --pre torch torchvision torchaudio \
     --index-url https://download.pytorch.org/whl/nightly/cu121
 
 # Install SeedVR2
@@ -22,14 +22,14 @@ ARG SEEDVR2_REF="main"
 RUN git clone "$SEEDVR2_REPO" /opt/seedvr2 \
     && cd /opt/seedvr2 \
     && git checkout "$SEEDVR2_REF" \
-    && pip3 install --no-cache-dir -r requirements.txt \
-    && pip3 install --no-cache-dir .
+    && pip3 install --no-cache-dir --root-user-action=ignore -r requirements.txt \
+    && pip3 install --no-cache-dir --root-user-action=ignore .
 
 WORKDIR /app
 
 # Copy requirements and install
 COPY requirements.txt /app/
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --root-user-action=ignore -r requirements.txt
 
 # Copy handler and shell script
 COPY handler.py /app/
