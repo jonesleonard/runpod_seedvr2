@@ -11,13 +11,15 @@ import argparse
 import logging
 import traceback
 from typing import Optional
-import runpod
+import requests
 from .find_network_volume_by_id import network_volume_exists
-from .update_network_volume_by_id import update_template
+from .update_network_volume_by_id import update_network_volume
 from .find_network_volume_by_name import find_network_volume_by_name
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+RUNPOD_REST_API_BASE_URL = os.environ.get("RUNPOD_REST_API_BASE_URL", "https://rest.runpod.io/v1")
 
 
 def create_network_volume(
@@ -27,7 +29,7 @@ def create_network_volume(
     network_volume_id: Optional[str] = None
 ) -> dict:
     """
-    Create or update a RunPod template.
+    Create or update a RunPod network volume.
     
     Args:
         name: Network volume name 
@@ -43,19 +45,19 @@ def create_network_volume(
     if not api_key:
         raise ValueError("RUNPOD_API_KEY environment variable is required")
     
-    # Prepare template configuration using SDK snake_case parameters
-    template_config = {
+    if size <= 0:
+        raise ValueError("size must be a positive integer (GB)")
+
+    # Prepare network volume configuration
+    network_volume_config = {
         "name": name,
-        "data_center_id": data_center_id,
+        "dataCenterId": data_center_id,
         "size": size
     }
     
     
     try:
-        # Initialize RunPod with API key
-        runpod.api_key = api_key
-        
-        # Check if template_id is provided
+        # Check if network_volume_id is provided
         if network_volume_id:
             # Check if network volume exists before updating
             if not network_volume_exists(network_volume_id, api_key):
@@ -80,24 +82,42 @@ def create_network_volume(
             response = update_network_volume(
                 network_volume_id=network_volume_id,
                 name=name,
-                image_name=image,
-                container_disk_in_gb=template_config["container_disk_in_gb"],
-                volume_in_gb=template_config["volume_in_gb"],
-                volume_mount_path=template_config["volume_mount_path"],
-                env=template_config.get('env', None),
-                api_key=api_key)
+                size=size,
+                api_key=api_key,
+            )
         else:
-            # Create new template
-            logger.info("Creating new template")
-            response = runpod.create_template(**template_config)
+            # Create new network volume
+            logger.info("Creating new network volume")
+            url = f"{RUNPOD_REST_API_BASE_URL}/networkvolumes"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+            response = requests.post(
+                url,
+                json=network_volume_config,
+                headers=headers,
+                timeout=30
+            )
+            response.raise_for_status()
+            response = response.json()
         
-        logger.info("Template operation successful!")
+        logger.info("Network volume operation successful!")
         logger.info(f"Response: {response}")
         
         return response
     
+    except requests.exceptions.HTTPError as e:
+        err_text = getattr(e.response, "text", "")
+        logger.error(f"HTTP error creating/updating network volume: {e}")
+        if err_text:
+            logger.error(f"Response: {err_text}")
+        raise
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to create/update network volume: {e}")
+        raise
     except Exception as e:
-        logger.error(f"Failed to create/update template: {e}")
+        logger.error(f"Failed to create/update network volume: {e}")
         logger.error("".join(traceback.format_exc()))
         raise
 
@@ -112,9 +132,6 @@ Examples:
   # Create a new network volume:
   python create_network_volume.py --name "network_volume" --data-center-id "EU-RO-1" --size 50
   
-  # Create with specific Docker tag:
-  python create_network_volume.py --name "network_volume" --data-center-id "EU-RO-1" --size 50
-  
   # Update an existing network volume:
   python create_network_volume.py --name "network_volume" --data-center-id "EU-RO-1" --size 50 --network-volume-id YOUR_NETWORK_VOLUME_ID
   
@@ -125,8 +142,8 @@ Environment Variables:
     
     parser.add_argument(
         "--name",
-        default="SeedVR2 Video Upscaler",
-        help="Template name (default: 'SeedVR2 Video Upscaler')"
+        default="SeedVR2 Models Volume",
+        help="Network volume name (default: 'SeedVR2 Models Volume')"
     )
     
     parser.add_argument(
@@ -155,7 +172,7 @@ Environment Variables:
     
     args = parser.parse_args()
     
-    # Check if template exists and handle --create-if-not-exists flag
+    # Check if network volume exists and handle --create-if-not-exists flag
     if args.create_if_not_exists and args.network_volume_id:
         api_key = os.environ.get("RUNPOD_API_KEY")
         if network_volume_exists(args.network_volume_id, api_key):
@@ -166,14 +183,14 @@ Environment Variables:
             sys.exit(0)
     
     try:
-        result = create_template(
+        result = create_network_volume(
             name=args.name,
-            image=args.image,
-            env_vars=env_vars if env_vars else None,
-            template_id=args.template_id
+            data_center_id=args.data_center_id,
+            size=args.size,
+            network_volume_id=args.network_volume_id
         )
         
-        logger.info("✓ Template created/updated successfully!")
+        logger.info("✓ Network volume created/updated successfully!")
         
         if result and isinstance(result, dict):
             if "id" in result:

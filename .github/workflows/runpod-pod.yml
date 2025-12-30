@@ -1,0 +1,156 @@
+name: Create RunPod Pod
+
+on:
+  workflow_call:
+    inputs:
+      pod_name:
+        description: "RunPod pod name"
+        required: true
+        type: string
+      template_id:
+        description: "Template ID to use for the pod"
+        required: false
+        type: string
+        default: ""
+      image_name:
+        description: "Docker image name (if no template is used)"
+        required: false
+        type: string
+        default: ""
+      gpu_type_id:
+        description: "GPU type ID (optional)"
+        required: false
+        type: string
+        default: ""
+      gpu_count:
+        description: "Number of GPUs (ignored for CPU pods)"
+        required: false
+        type: number
+        default: 1
+      cloud_type:
+        description: "Cloud type (ALL, COMMUNITY, SECURE)"
+        required: false
+        type: string
+        default: "ALL"
+      data_center_id:
+        description: "Data center ID"
+        required: false
+        type: string
+        default: ""
+      network_volume_id:
+        description: "Network volume ID to attach"
+        required: false
+        type: string
+        default: ""
+      volume_mount_path:
+        description: "Network volume mount path"
+        required: false
+        type: string
+        default: "/runpod-volume"
+      ports:
+        description: "Ports to expose (e.g., '22/tcp,8888/http')"
+        required: false
+        type: string
+        default: ""
+      env_vars:
+        description: "Newline-separated KEY=VALUE environment variables"
+        required: false
+        type: string
+        default: ""
+      start_ssh:
+        description: "Whether to start SSH in the pod"
+        required: false
+        type: boolean
+        default: true
+      python_version:
+        description: "Python version to use"
+        required: false
+        type: string
+        default: "3.13"
+    outputs:
+      pod_id:
+        description: "The ID of the created pod"
+        value: ${{ jobs.create-pod.outputs.pod_id }}
+    secrets:
+      RUNPOD_API_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  create-pod:
+    runs-on: ubuntu-latest
+    outputs:
+      pod_id: ${{ steps.run.outputs.pod_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: "pip"
+          cache-dependency-path: "src/runpod_mgmt/requirements.txt"
+
+      - name: Install dependencies
+        run: pip install -r src/runpod_mgmt/requirements.txt
+
+      - name: Create pod
+        id: run
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+        run: |
+          export PYTHONPATH="${GITHUB_WORKSPACE}/src"
+
+          ARGS=(
+            --name "${{ inputs.pod_name }}"
+            --gpu-count "${{ inputs.gpu_count }}"
+            --cloud-type "${{ inputs.cloud_type }}"
+            --volume-mount-path "${{ inputs.volume_mount_path }}"
+          )
+
+          if [[ -n "${{ inputs.template_id }}" ]]; then
+            ARGS+=(--template-id "${{ inputs.template_id }}")
+          fi
+
+          if [[ -n "${{ inputs.image_name }}" ]]; then
+            ARGS+=(--image-name "${{ inputs.image_name }}")
+          fi
+
+          if [[ -n "${{ inputs.gpu_type_id }}" ]]; then
+            ARGS+=(--gpu-type-id "${{ inputs.gpu_type_id }}")
+          fi
+
+          if [[ -n "${{ inputs.data_center_id }}" ]]; then
+            ARGS+=(--data-center-id "${{ inputs.data_center_id }}")
+          fi
+
+          if [[ -n "${{ inputs.network_volume_id }}" ]]; then
+            ARGS+=(--network-volume-id "${{ inputs.network_volume_id }}")
+          fi
+
+          if [[ -n "${{ inputs.ports }}" ]]; then
+            ARGS+=(--ports "${{ inputs.ports }}")
+          fi
+
+          if [[ -n "${{ inputs.env_vars }}" ]]; then
+            while IFS= read -r line; do
+              [[ -z "$line" ]] && continue
+              ARGS+=(--env "$line")
+            done <<< "${{ inputs.env_vars }}"
+          fi
+
+          if [[ "${{ inputs.start_ssh }}" == "false" ]]; then
+            ARGS+=(--no-start-ssh)
+          fi
+
+          python -m runpod_mgmt.pod.create_pod "${ARGS[@]}"
+
+      - name: Pod creation result
+        if: success()
+        run: |
+          echo "✓ RunPod pod created"
+          echo "Pod ID: ${{ steps.run.outputs.pod_id }}"

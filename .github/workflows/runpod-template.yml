@@ -16,6 +16,11 @@ on:
         required: false
         type: string
         default: 'seedvr2_upscaler'
+      is_serverless:
+        description: 'Whether the template should be serverless'
+        required: false
+        type: boolean
+        default: true
       python_version:
         description: 'Python version to use in the RunPod template'
         required: false
@@ -83,6 +88,10 @@ jobs:
             --image "${{ env.FULL_IMAGE_NAME }}"
             --create-if-not-exists
           )
+
+          if [[ "${{ inputs.is_serverless }}" == "false" ]]; then
+            ARGS+=(--non-serverless)
+          fi
           
           export PYTHONPATH="${GITHUB_WORKSPACE}/src"
           

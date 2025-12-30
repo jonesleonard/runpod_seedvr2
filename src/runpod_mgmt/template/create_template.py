@@ -162,6 +162,21 @@ Environment Variables:
         action="store_true",
         help="Only create template if it doesn't exist (skip update)"
     )
+
+    serverless_group = parser.add_mutually_exclusive_group()
+    serverless_group.add_argument(
+        "--serverless",
+        dest="is_serverless",
+        action="store_true",
+        help="Create a serverless template (default)"
+    )
+    serverless_group.add_argument(
+        "--non-serverless",
+        dest="is_serverless",
+        action="store_false",
+        help="Create a non-serverless template"
+    )
+    parser.set_defaults(is_serverless=True)
     
     parser.add_argument(
         "--env",
@@ -214,6 +229,7 @@ Environment Variables:
         result = create_template(
             name=args.name,
             image=args.image,
+            is_serverless=args.is_serverless,
             env_vars=env_vars if env_vars else None,
             template_id=args.template_id
         )

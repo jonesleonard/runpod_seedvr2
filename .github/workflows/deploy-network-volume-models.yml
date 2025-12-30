@@ -1,0 +1,290 @@
+name: Deploy Network Volume Models
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: "Docker image name for the model download image"
+        required: false
+        type: string
+        default: "seedvr2-model-download"
+      tag:
+        description: "Docker image tag"
+        required: false
+        type: string
+        default: "latest"
+      template_name:
+        description: "RunPod template name for model downloads"
+        required: false
+        type: string
+        default: "seedvr2_model_download"
+      runpod_rest_api_base_url:
+        description: "RunPod REST API base URL"
+        required: false
+        type: string
+        default: "https://rest.runpod.io/v1"
+      data_center_id:
+        description: "Data center ID for the network volume and pod"
+        required: true
+        type: string
+      network_volume_name:
+        description: "Network volume name"
+        required: false
+        type: string
+        default: "SeedVR2 Models Volume"
+      network_volume_size:
+        description: "Network volume size (GB)"
+        required: false
+        type: string
+        default: "50"
+      pod_name:
+        description: "Pod name for model download"
+        required: false
+        type: string
+        default: "seedvr2-model-download"
+      gpu_type_id:
+        description: "GPU type ID (optional)"
+        required: false
+        type: string
+        default: ""
+      volume_mount_path:
+        description: "Network volume mount path"
+        required: false
+        type: string
+        default: "/runpod-volume"
+      models_dir:
+        description: "Models directory inside the mounted volume"
+        required: false
+        type: string
+        default: "/runpod-volume/models"
+      aws_role_arn:
+        description: "AWS IAM role ARN to assume for presigning"
+        required: true
+        type: string
+      aws_role_session_name:
+        description: "AWS role session name"
+        required: false
+        type: string
+        default: "gha-runpod-presign"
+      aws_region:
+        description: "AWS region for S3 presign"
+        required: false
+        type: string
+        default: "us-east-1"
+      models_bucket:
+        description: "S3 bucket containing the models"
+        required: true
+        type: string
+      vae_key:
+        description: "S3 object key for the VAE model"
+        required: true
+        type: string
+      dit_key:
+        description: "S3 object key for the DiT model"
+        required: true
+        type: string
+      presign_expires_seconds:
+        description: "Presigned URL expiration in seconds"
+        required: false
+        type: string
+        default: "3600"
+      python_version:
+        description: "Python version for RunPod tooling"
+        required: false
+        type: string
+        default: "3.13"
+    secrets:
+      RUNPOD_API_KEY:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: "Docker image name for the model download image"
+        required: false
+        type: string
+        default: "seedvr2-model-download"
+      tag:
+        description: "Docker image tag"
+        required: false
+        type: string
+        default: "latest"
+      template_name:
+        description: "RunPod template name for model downloads"
+        required: false
+        type: string
+        default: "seedvr2_model_download"
+      runpod_rest_api_base_url:
+        description: "RunPod REST API base URL"
+        required: false
+        type: string
+        default: "https://rest.runpod.io/v1"
+      data_center_id:
+        description: "Data center ID for the network volume and pod"
+        required: true
+        type: string
+      network_volume_name:
+        description: "Network volume name"
+        required: false
+        type: string
+        default: "seedvr2-models-volume"
+      network_volume_size:
+        description: "Network volume size (GB)"
+        required: false
+        type: string
+        default: "50"
+      pod_name:
+        description: "Pod name for model download"
+        required: false
+        type: string
+        default: "seedvr2-model-download"
+      gpu_type_id:
+        description: "GPU type ID (optional)"
+        required: false
+        type: string
+        default: ""
+      volume_mount_path:
+        description: "Network volume mount path"
+        required: false
+        type: string
+        default: "/runpod-volume"
+      models_dir:
+        description: "Models directory inside the mounted volume"
+        required: false
+        type: string
+        default: "/runpod-volume/models"
+      aws_role_arn:
+        description: "AWS IAM role ARN to assume for presigning"
+        required: true
+        type: string
+      aws_role_session_name:
+        description: "AWS role session name"
+        required: false
+        type: string
+        default: "gha-runpod-presign"
+      aws_region:
+        description: "AWS region for S3 presign"
+        required: false
+        type: string
+        default: "us-east-1"
+      models_bucket:
+        description: "S3 bucket containing the models"
+        required: true
+        type: string
+      vae_key:
+        description: "S3 object key for the VAE model"
+        required: true
+        type: string
+      dit_key:
+        description: "S3 object key for the DiT model"
+        required: true
+        type: string
+      presign_expires_seconds:
+        description: "Presigned URL expiration in seconds"
+        required: false
+        type: string
+        default: "3600"
+      python_version:
+        description: "Python version for RunPod tooling"
+        required: false
+        type: string
+        default: "3.13"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build and Push Model Download Image
+    uses: ./.github/workflows/docker-build-push.yml
+    with:
+      dockerhub_username: ${{ vars.DOCKERHUB_USERNAME }}
+      image_name: ${{ inputs.image_name }}
+      tag: ${{ inputs.tag }}
+      build_context: "./src/model_download"
+      dockerfile: "./src/model_download/Dockerfile"
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  create-update-template:
+    name: Create/Update RunPod Template (Model Download)
+    needs: build-and-push
+    uses: ./.github/workflows/runpod-template.yml
+    with:
+      runpod_rest_api_base_url: ${{ inputs.runpod_rest_api_base_url }}
+      python_version: ${{ inputs.python_version }}
+      full_image_name: ${{ needs.build-and-push.outputs.full_image_name }}
+      template_name: ${{ inputs.template_name }}
+      is_serverless: false
+    secrets:
+      RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+
+  create-update-network-volume:
+    name: Create/Update RunPod Network Volume
+    uses: ./.github/workflows/runpod-network-volume.yml
+    with:
+      runpod_rest_api_base_url: ${{ inputs.runpod_rest_api_base_url }}
+      python_version: ${{ inputs.python_version }}
+      network_volume_name: ${{ inputs.network_volume_name }}
+      network_volume_size: ${{ inputs.network_volume_size }}
+      data_center_id: ${{ inputs.data_center_id }}
+    secrets:
+      RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+
+  presign-model-urls:
+    name: Generate Presigned Model URLs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      vae_url: ${{ steps.presign.outputs.vae_url }}
+      dit_url: ${{ steps.presign.outputs.dit_url }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws_role_arn }}
+          role-session-name: ${{ inputs.aws_role_session_name }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Generate presigned URLs
+        id: presign
+        env:
+          MODELS_BUCKET: ${{ inputs.models_bucket }}
+          VAE_KEY: ${{ inputs.vae_key }}
+          DIT_KEY: ${{ inputs.dit_key }}
+          PRESIGN_EXPIRES: ${{ inputs.presign_expires_seconds }}
+        run: |
+          VAE_URL="$(aws s3 presign "s3://${MODELS_BUCKET}/${VAE_KEY}" --expires-in "${PRESIGN_EXPIRES}")"
+          DIT_URL="$(aws s3 presign "s3://${MODELS_BUCKET}/${DIT_KEY}" --expires-in "${PRESIGN_EXPIRES}")"
+          {
+            echo "vae_url=${VAE_URL}"
+            echo "dit_url=${DIT_URL}"
+          } >> "${GITHUB_OUTPUT}"
+
+  create-pod:
+    name: Create RunPod Pod (Model Download)
+    needs:
+      - create-update-template
+      - create-update-network-volume
+      - build-and-push
+      - presign-model-urls
+    uses: ./.github/workflows/runpod-pod.yml
+    with:
+      pod_name: ${{ inputs.pod_name }}
+      template_id: ${{ needs.create-update-template.outputs.template_id }}
+      image_name: ${{ needs.build-and-push.outputs.full_image_name }}
+      gpu_type_id: ${{ inputs.gpu_type_id }}
+      data_center_id: ${{ inputs.data_center_id }}
+      network_volume_id: ${{ needs.create-update-network-volume.outputs.network_volume_id }}
+      volume_mount_path: ${{ inputs.volume_mount_path }}
+      env_vars: |
+        VAE_URL=${{ needs.presign-model-urls.outputs.vae_url }}
+        DIT_URL=${{ needs.presign-model-urls.outputs.dit_url }}
+        MODELS_DIR=${{ inputs.models_dir }}
+      start_ssh: false
+      python_version: ${{ inputs.python_version }}
+    secrets:
+      RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}

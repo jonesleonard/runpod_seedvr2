@@ -1,0 +1,81 @@
+name: Create or Update RunPod Network Volume
+
+on:
+  workflow_call:
+    inputs:
+      runpod_rest_api_base_url:
+        description: "RunPod REST API base URL"
+        required: true
+        type: string
+      network_volume_name:
+        description: "RunPod network volume name"
+        required: false
+        type: string
+        default: "SeedVR2 Models Volume"
+      data_center_id:
+        description: "Data center ID for the network volume"
+        required: true
+        type: string
+      network_volume_size:
+        description: "Network volume size (GB)"
+        required: false
+        type: string
+        default: "50"
+      python_version:
+        description: "Python version to use"
+        required: false
+        type: string
+        default: "3.13"
+    outputs:
+      network_volume_id:
+        description: "The ID of the created/updated network volume"
+        value: ${{ jobs.create-update-network-volume.outputs.network_volume_id }}
+    secrets:
+      RUNPOD_API_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  create-update-network-volume:
+    runs-on: ubuntu-latest
+    outputs:
+      network_volume_id: ${{ steps.run.outputs.network_volume_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: "pip"
+          cache-dependency-path: "src/runpod_mgmt/requirements.txt"
+
+      - name: Install dependencies
+        run: pip install -r src/runpod_mgmt/requirements.txt
+
+      - name: Create or update RunPod network volume
+        id: run
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          RUNPOD_REST_API_BASE_URL: ${{ inputs.runpod_rest_api_base_url }}
+        run: |
+          export PYTHONPATH="${GITHUB_WORKSPACE}/src"
+
+          ARGS=(
+            --name "${{ inputs.network_volume_name }}"
+            --data-center-id "${{ inputs.data_center_id }}"
+            --size "${{ inputs.network_volume_size }}"
+          )
+
+          python -m runpod_mgmt.network_volume.create_network_volume "${ARGS[@]}"
+
+      - name: Network volume creation result
+        if: success()
+        run: |
+          echo "✓ RunPod network volume created/updated"
+          echo "Name: ${{ inputs.network_volume_name }}"
+          echo "Network Volume ID: ${{ steps.run.outputs.network_volume_id }}"
