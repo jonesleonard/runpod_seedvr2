@@ -193,6 +193,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build-and-push-model-download:
@@ -209,7 +210,6 @@ jobs:
 
   create-update-template-model-download:
     name: Create/Update RunPod Template (Model Download)
-    needs: build-and-push-model-download
     uses: ./.github/workflows/runpod-template.yml
     with:
       runpod_rest_api_base_url: ${{ inputs.runpod_rest_api_base_url }}
