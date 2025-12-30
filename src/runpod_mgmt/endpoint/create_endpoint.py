@@ -104,12 +104,33 @@ def create_or_update_endpoint(
             workers_min=workers_min,
             workers_max=workers_max,
             idle_timeout=idle_timeout,
-            execution_timeout_ms=execution_timeout_ms,
             scaler_type=scaler_type,
             scaler_value=scaler_value
         )
         
         logger.info("Endpoint created successfully!")
+        
+        # Update with execution_timeout_ms if set (not supported in create_endpoint)
+        if execution_timeout_ms and response and "id" in response:
+            new_endpoint_id = response["id"]
+            logger.info(
+                f"Updating endpoint {new_endpoint_id} with "
+                f"execution_timeout_ms={execution_timeout_ms}"
+            )
+            response = update_endpoint(
+                endpoint_id=new_endpoint_id,
+                template_id=template_id,
+                api_key=api_key,
+                name=name,
+                gpu_ids=gpu_ids,
+                workers_min=workers_min,
+                workers_max=workers_max,
+                idle_timeout=idle_timeout,
+                execution_timeout_ms=execution_timeout_ms,
+                scaler_type=scaler_type,
+                scaler_value=scaler_value
+            )
+        
         return response
     
     except Exception as e:
