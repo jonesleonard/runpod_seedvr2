@@ -75,7 +75,7 @@ def _ensure_models_downloaded(job_input: Dict[str, Any]) -> None:
     _MODELS_READY = True
 
 
-def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
+def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
     """
     Upscale a single video segment by invoking the shell script.
     
@@ -96,6 +96,8 @@ def upscale_segment(job_input: Dict[str, Any]) -> Dict[str, Any]:
     start_time = time.time()
     
     try:
+        job_input = job.get("input", job)
+
         # Validate input - now using presigned URLs instead of S3 URIs
         input_presigned_url = job_input.get("input_presigned_url")
         output_presigned_url = job_input.get("output_presigned_url")

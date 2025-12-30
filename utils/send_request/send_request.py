@@ -173,7 +173,7 @@ def main() -> int:
         "output_presigned_url": output_url,
         "vae_model_presigned_url": vae_url,
         "dit_model_presigned_url": dit_url,
-        "params": params,
+        "params": params
     }
 
     api_key = args.runpod_api_key or config.get("runpod_api_key") or os.environ.get("RUNPOD_API_KEY")
@@ -189,7 +189,7 @@ def main() -> int:
         print(json.dumps(result, indent=2))
     else:
         job = endpoint.run(payload)
-        print(json.dumps({"job_id": job.job_id}, indent=2))
+        print(json.dumps({"job_id": job.job_id, "payload": payload}, indent=2))
 
     return 0
 
