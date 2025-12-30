@@ -122,4 +122,4 @@ jobs:
           echo "✓ RunPod endpoint successfully created/updated"
           echo "Name: ${{ env.ENDPOINT_NAME }}"
           echo "Template ID: ${{ env.TEMPLATE_ID }}"
-          echo "Endpoint ID: ${{ steps.run.outputs.endpoint_id }}
+          echo "Endpoint ID: ${{ steps.run.outputs.endpoint_id }}"
