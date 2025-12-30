@@ -1,0 +1,100 @@
+name: Create or Update RunPod Template
+
+on:
+  workflow_call:
+    inputs:
+      full_image_name:
+        description: 'Full Docker image name (username/image:tag)'
+        required: true
+        type: string
+      template_name:
+        description: 'RunPod template name'
+        required: false
+        type: string
+        default: 'SeedVR2 Video Upscaler'
+    secrets:
+      RUNPOD_API_KEY:
+        required: true
+      RUNPOD_TEMPLATE_ID:
+        required: false
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Docker image name'
+        required: true
+        default: 'seedvr2-upscaler'
+      image_tag:
+        description: 'Docker image tag'
+        required: true
+        default: 'latest'
+      template_name:
+        description: 'RunPod template name'
+        required: false
+        default: 'SeedVR2 Video Upscaler'
+
+env:
+  FULL_IMAGE_NAME: ${{ inputs.full_image_name }}
+  TEMPLATE_NAME: ${{ inputs.template_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  create-template:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install RunPod SDK
+        run: pip install runpod
+      
+      - name: Create or update RunPod template
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+        run: |
+          echo "Creating/updating RunPod template for ${{ env.FULL_IMAGE_NAME }}"
+          
+          # Split full image name into components
+          FULL_IMAGE="${{ env.FULL_IMAGE_NAME }}"
+          # Extract username/image (everything before the last colon)
+          IMAGE_WITH_USER="${FULL_IMAGE%:*}"
+          # Extract tag (everything after the last colon)
+          TAG="${FULL_IMAGE##*:}"
+          # Extract just the image name (after the /)
+          IMAGE_NAME="${IMAGE_WITH_USER##*/}"
+          # Extract username (before the /)
+          USERNAME="${IMAGE_WITH_USER%/*}"
+          
+          ARGS=(
+            --name "${{ env.TEMPLATE_NAME }}"
+            --image "${IMAGE_NAME}"
+            --tag "${TAG}"
+            --username "${USERNAME}"
+          )
+          
+          # Add template ID if it exists
+          if [ -n "${{ secrets.RUNPOD_TEMPLATE_ID }}" ]; then
+            ARGS+=(--template-id "${{ secrets.RUNPOD_TEMPLATE_ID }}")
+            echo "Updating existing template: ${{ secrets.RUNPOD_TEMPLATE_ID }}"
+          else
+            echo "Creating new template"
+          fi
+          
+          python src/runpod/create_template.py "${ARGS[@]}"
+      
+      - name: Template creation result
+        if: success()
+        run: |
+          echo "✓ RunPod template successfully created/updated"
+          echo "Image: ${{ env.FULL_IMAGE_NAME }}"
+          echo ""
+          echo "If this was a new template, check the logs above for the template ID"
+          echo "and add it as RUNPOD_TEMPLATE_ID secret to update the same template in future runs."

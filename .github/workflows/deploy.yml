@@ -1,0 +1,55 @@
+name: Build, Push, and Deploy
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+    paths:
+      - 'src/upscale/**'
+      - 'src/runpod/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag (default: latest)'
+        required: false
+        default: 'latest'
+      seedvr2_ref:
+        description: 'SeedVR2 version to use'
+        required: false
+        default: 'v2.5.23'
+
+env:
+  IMAGE_NAME: seedvr2-upscaler
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    uses: ./.github/workflows/docker-build-push.yml
+    with:
+      image_name: ${{ vars.UPSCALER_IMAGE_NAME }}
+      tag: ${{ github.event.inputs.tag || 'latest' }}
+      seedvr2_ref: ${{ github.event.inputs.seedvr2_ref || vars.SEEDVR2_REF || 'v2.5.23' }}
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  
+  create-runpod-template:
+    name: Create/Update RunPod Template
+    needs: build-and-push
+    uses: ./.github/workflows/runpod-template.yml
+    with:
+      full_image_name: ${{ needs.build-and-push.outputs.full_image_name }}
+      template_name: 'SeedVR2 Video Upscaler'
+    secrets:
+      RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+      RUNPOD_TEMPLATE_ID: ${{ secrets.RUNPOD_TEMPLATE_ID }}
