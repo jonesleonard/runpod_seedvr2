@@ -67,10 +67,19 @@ def _presign_get(s3_client, bucket: str, key: str, expires: int) -> str:
     )
 
 
-def _presign_post(s3_client, bucket: str, key: str, expires: int) -> dict:
-    return s3_client.generate_presigned_post(
-        Bucket=bucket,
-        Key=key,
+def _presign_put(
+    s3_client,
+    bucket: str,
+    key: str,
+    expires: int,
+    content_type: Optional[str],
+) -> str:
+    params = {"Bucket": bucket, "Key": key}
+    if content_type:
+        params["ContentType"] = content_type
+    return s3_client.generate_presigned_url(
+        "put_object",
+        Params=params,
         ExpiresIn=expires,
     )
 
@@ -99,6 +108,7 @@ def main() -> int:
         help="Session name for assumed role",
     )
     parser.add_argument("--expires", type=int, help="Presigned URL expiration (seconds)")
+    parser.add_argument("--content-type", help="Content-Type for presigned output upload")
 
     parser.add_argument("--input-bucket", help="S3 bucket for input video")
     parser.add_argument("--input-key", help="S3 key for input video")
@@ -138,6 +148,7 @@ def main() -> int:
         or "local-runpod-presign"
     )
     expires = args.expires or config.get("expires") or 3600
+    content_type = args.content_type or config.get("content_type")
 
     input_bucket = args.input_bucket or config.get("input_bucket")
     input_key = args.input_key or config.get("input_key")
@@ -166,7 +177,13 @@ def main() -> int:
     s3_client = _get_s3_client(region, role_arn, role_session_name)
 
     input_url = _presign_get(s3_client, input_bucket, input_key, expires)
-    output_url, fields = _presign_post(s3_client, output_bucket, output_key, expires)
+    output_presigned_url = _presign_put(
+        s3_client,
+        output_bucket,
+        output_key,
+        expires,
+        content_type,
+    )
     vae_url = _presign_get(s3_client, vae_bucket, vae_key, expires)
     dit_url = _presign_get(s3_client, dit_bucket, dit_key, expires)
 
@@ -178,7 +195,7 @@ def main() -> int:
 
     payload = {
         "input_presigned_url": input_url,
-        "output_presigned_url": output_url,
+        "output_presigned_url": output_presigned_url,
         "vae_model_presigned_url": vae_url,
         "dit_model_presigned_url": dit_url,
         "params": params
@@ -198,8 +215,8 @@ def main() -> int:
         result = endpoint.run_sync(payload, timeout=timeout)
         print(json.dumps(result, indent=2))
     else:
-        # job = endpoint.run(payload)
-        print(json.dumps({"job_id": 'test', "payload": payload}, indent=2))
+        job = endpoint.run(payload)
+        print(json.dumps({"job_id": job.job_id, "payload": payload}, indent=2))
 
     return 0
 

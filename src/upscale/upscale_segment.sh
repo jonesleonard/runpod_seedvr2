@@ -60,8 +60,8 @@ validate_requirements() {
         exit 1
     fi
     
-    if [[ -z "${OUTPUT_POST_URL:-}" || -z "${OUTPUT_POST_FIELDS:-}" ]]; then
-        log_error "OUTPUT_POST_URL and OUTPUT_POST_FIELDS are required"
+    if [[ -z "${OUTPUT_PRESIGNED_URL:-}" ]]; then
+        log_error "OUTPUT_PRESIGNED_URL is required"
         exit 1
     fi
     
@@ -71,8 +71,8 @@ validate_requirements() {
         exit 1
     fi
     
-    if [[ ! "$OUTPUT_POST_URL" =~ ^https:// ]]; then
-        log_error "OUTPUT_POST_URL must be an HTTPS URL"
+    if [[ ! "$OUTPUT_PRESIGNED_URL" =~ ^https:// ]]; then
+        log_error "OUTPUT_PRESIGNED_URL must be an HTTPS URL"
         exit 1
     fi
     
@@ -278,22 +278,29 @@ main() {
     log_info "Output segment file size: ${output_size} bytes"
     log_metric "output_segment_size_bytes" "$output_size"
     
-    # Upload upscaled segment using presigned POST
+    # Upload upscaled segment using presigned URL
     log_info "Uploading upscaled segment..."
     local upload_start
     upload_start=$(date +%s)
 
-    local curl_args=()
-    local field_line
-    while IFS= read -r field_line; do
-        [[ -z "$field_line" ]] && continue
-        curl_args+=(--form-string "$field_line")
-    done <<< "$OUTPUT_POST_FIELDS"
-
-    if ! curl -fsSL -X POST "$OUTPUT_POST_URL" "${curl_args[@]}" --form-string "file=@${OUTPUT_FILE}"; then
-        log_error "Failed to upload segment using presigned POST"
+    local response_file
+    response_file="$(mktemp)"
+    local http_code
+    http_code=$(curl -sS -o "$response_file" -w "%{http_code}" --retry 3 --retry-delay 2 \
+        -X PUT -T "$OUTPUT_FILE" -H "Content-Type: video/mp4" "$OUTPUT_PRESIGNED_URL" || true)
+    if [[ "$http_code" != "200" && "$http_code" != "204" ]]; then
+        log_error "Failed to upload segment using presigned URL (HTTP ${http_code})"
+        if [[ -s "$response_file" ]]; then
+            if [[ "$http_code" == "403" ]]; then
+                log_error "Upload response: $(cat "$response_file")"
+            else
+                log_error "Upload response: $(cat "$response_file")"
+            fi
+        fi
+        rm -f "$response_file"
         exit 1
     fi
+    rm -f "$response_file"
     
     local upload_end
     upload_end=$(date +%s)
