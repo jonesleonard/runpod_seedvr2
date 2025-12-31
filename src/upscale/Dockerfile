@@ -2,7 +2,7 @@ FROM nvidia/cuda:12.4.0-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv git ffmpeg ca-certificates curl \
+    python3 python3-pip python3-venv git ffmpeg ca-certificates curl build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # Install PyTorch with CUDA support
 RUN pip install --no-cache-dir --pre torch torchvision torchaudio \
     --index-url https://download.pytorch.org/whl/cu121
+
+# Preinstall sageattention (used for ATTENTION_MODE=sageattn_2/3)
+RUN pip install --no-cache-dir sageattention
 
 # Install SeedVR2
 ARG SEEDVR2_REPO="https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git"

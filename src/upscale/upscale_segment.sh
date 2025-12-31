@@ -185,16 +185,6 @@ main() {
     
     validate_requirements
     
-    # Install sageattention if needed
-    if [[ "$ATTENTION_MODE" == "sageattn_2" ]] || [[ "$ATTENTION_MODE" == "sageattn_3" ]]; then
-        log_info "ATTENTION_MODE=$ATTENTION_MODE detected. Installing sageattention..."
-        if ! pip3 install --no-cache-dir sageattention; then
-            log_error "Failed to install sageattention"
-            exit 1
-        fi
-        log_info "sageattention installed successfully"
-    fi
-    
     # Create work directories
     log_info "Creating work directories..."
     mkdir -p "$INPUT_DIR" "$OUTPUT_DIR"
