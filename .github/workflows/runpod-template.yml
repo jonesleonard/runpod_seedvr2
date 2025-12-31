@@ -101,8 +101,8 @@ jobs:
           ARGS=(
             --name "${{ env.TEMPLATE_NAME }}"
             --image "${{ env.FULL_IMAGE_NAME }}"
-            --container-disk "${{ inputs.container_disk }}"
-            --volume "${{ inputs.volume }}"
+            --container-disk ${{ inputs.container_disk }}
+            --volume ${{ inputs.volume }}
             --create-if-not-exists
           )
 
