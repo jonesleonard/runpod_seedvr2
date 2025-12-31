@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 def create_template(
     name: str,
     image: str,
+    container_disk_in_gb: int,
+    volume_in_gb: int,
     is_serverless: bool = True,
     env_vars: Optional[dict] = None,
     template_id: Optional[str] = None
@@ -57,8 +59,8 @@ def create_template(
     template_config = {
         "name": name,
         "image_name": image,
-        "container_disk_in_gb": 20,  # Adjust based on your needs
-        "volume_in_gb": 50,  # Storage for models and temporary files
+        "container_disk_in_gb": container_disk_in_gb,  # Adjust based on your needs
+        "volume_in_gb": volume_in_gb,  # Storage for models and temporary files
         "volume_mount_path": "/work",
         "is_serverless": is_serverless
     }
