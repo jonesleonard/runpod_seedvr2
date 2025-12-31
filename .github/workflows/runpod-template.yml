@@ -11,6 +11,16 @@ on:
         description: 'RunPod REST API base URL'
         required: true
         type: string
+      container_disk:
+        description: 'The amount of disk space in GB to allocate for the container.'
+        required: false
+        type: number
+        default: 50
+      volume:
+        description: 'The amount of disk space, in gigabytes (GB), to allocate on the Pods deployed with this template.'
+        required: false
+        type: number
+        default: 20
       template_name:
         description: 'RunPod template name'
         required: false
@@ -86,6 +96,8 @@ jobs:
           ARGS=(
             --name "${{ env.TEMPLATE_NAME }}"
             --image "${{ env.FULL_IMAGE_NAME }}"
+            --container-disk "${{ inputs.container_disk }}"
+            --volume "${{ inputs.volume }}"
             --create-if-not-exists
           )
 
