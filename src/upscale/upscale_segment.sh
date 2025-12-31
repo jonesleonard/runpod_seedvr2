@@ -10,7 +10,7 @@ readonly INPUT_DIR="${WORK_DIR}/in"
 readonly OUTPUT_DIR="${WORK_DIR}/out"
 readonly MODEL_DIR="${MODELS_DIR:-/models}"  # Local model storage (can override)
 readonly INPUT_FILE="${INPUT_DIR}/segment.mp4"
-readonly OUTPUT_FILE="${OUTPUT_DIR}/up.mp4"
+readonly OUTPUT_FILE="${OUTPUT_DIR}/segment.mp4"
 
 cleanup() {
     local exit_code=$?
