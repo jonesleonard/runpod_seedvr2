@@ -4,6 +4,7 @@ Delegates to upscale_segment.sh for the actual work.
 """
 
 import os
+import sys
 import subprocess
 import logging
 import time
@@ -11,8 +12,9 @@ import json
 from pathlib import Path
 from typing import Dict, Any, List
 from urllib.parse import urlparse
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 import runpod
+from tqdm import tqdm
 
 level = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(level=getattr(logging, level, logging.INFO))
@@ -21,6 +23,7 @@ logger = logging.getLogger(__name__)
 SCRIPT_PATH = "/app/upscale_segment.sh"
 MODELS_DEFAULT_DIR = "/models"
 _MODELS_READY = False
+DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
 
 def _get_model_urls(job_input: Dict[str, Any]) -> List[str]:
@@ -42,12 +45,41 @@ def _filename_from_url(url: str) -> str:
 
 def _download_file(url: str, dest_path: Path) -> None:
     logger.info("Downloading %s -> %s", url, dest_path)
-    with urlopen(url, timeout=60) as response, open(dest_path, "wb") as out_file:
-        while True:
-            chunk = response.read(1024 * 1024)
-            if not chunk:
-                break
-            out_file.write(chunk)
+    temp_path = Path(f"{dest_path}.download")
+    existing_size = temp_path.stat().st_size if temp_path.exists() else 0
+    headers = {"Range": f"bytes={existing_size}-"} if existing_size > 0 else {}
+
+    request = Request(url, headers=headers)
+    with urlopen(request, timeout=60) as response:
+        content_length = int(response.headers.get("Content-Length", 0) or 0)
+        content_range = response.headers.get("Content-Range")
+
+        if existing_size > 0 and not content_range:
+            logger.info("Server did not honor Range; restarting download for %s", dest_path)
+            existing_size = 0
+            temp_path.unlink(missing_ok=True)
+
+        total_size = existing_size + content_length if content_length else None
+        mode = "ab" if existing_size else "wb"
+
+        with open(temp_path, mode) as out_file:
+            with tqdm(
+                total=total_size,
+                initial=existing_size,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                desc=dest_path.name,
+                disable=False,
+            ) as pbar:
+                while True:
+                    chunk = response.read(DOWNLOAD_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    out_file.write(chunk)
+                    pbar.update(len(chunk))
+
+    os.replace(temp_path, dest_path)
     logger.info("Downloaded %s (%s bytes)", dest_path, dest_path.stat().st_size)
 
 
