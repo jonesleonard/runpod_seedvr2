@@ -17,14 +17,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _normalize_gpu_ids_for_rest(gpu_ids: Optional[Any]) -> Optional[List[str]]:
-    if gpu_ids is None:
+def _normalize_ids_for_rest(ids: Optional[Any]) -> Optional[List[str]]:
+    if ids is None:
         return None
-    if isinstance(gpu_ids, list):
-        return [str(item).strip() for item in gpu_ids if str(item).strip()]
-    if isinstance(gpu_ids, str):
-        return [item.strip() for item in gpu_ids.split(",") if item.strip()]
-    return [str(gpu_ids).strip()]
+    if isinstance(ids, list):
+        return [str(item).strip() for item in ids if str(item).strip()]
+    if isinstance(ids, str):
+        return [item.strip() for item in ids.split(",") if item.strip()]
+    return [str(ids).strip()]
 
 
 def update_endpoint(
@@ -33,6 +33,7 @@ def update_endpoint(
     api_key: Optional[str] = None,
     name: Optional[str] = None,
     gpu_ids: Optional[str] = None,
+    data_center_ids: Optional[Any] = None,
     workers_min: Optional[int] = None,
     workers_max: Optional[int] = None,
     idle_timeout: Optional[int] = None,
@@ -50,6 +51,7 @@ def update_endpoint(
         api_key: RunPod API key (if not provided, uses RUNPOD_API_KEY env var)
         name: New endpoint name (optional)
         gpu_ids: GPU type IDs (optional)
+        data_center_ids: Data center IDs (optional)
         workers_min: Minimum number of workers (optional)
         workers_max: Maximum number of workers (optional)
         idle_timeout: Idle timeout in seconds (optional)
@@ -82,9 +84,17 @@ def update_endpoint(
     
     if name is not None:
         payload["name"] = name
-    normalized_gpu_ids = _normalize_gpu_ids_for_rest(gpu_ids)
+    
+    # Normalize GPU IDs for REST API
+    normalized_gpu_ids = _normalize_ids_for_rest(gpu_ids)
     if normalized_gpu_ids:
         payload["gpuTypeIds"] = normalized_gpu_ids
+
+    # Normalize data center IDs for REST API
+    normalized_data_center_ids = _normalize_ids_for_rest(data_center_ids)
+    if normalized_data_center_ids:
+        payload["dataCenterIds"] = normalized_data_center_ids
+
     if workers_min is not None:
         payload["workersMin"] = workers_min
     if workers_max is not None:
@@ -147,6 +157,10 @@ def main():
         help="GPU type IDs (optional)"
     )
     parser.add_argument(
+        "--data-center-ids",
+        help="Data center IDs (optional)"
+    )
+    parser.add_argument(
         "--workers-min",
         type=int,
         help="Minimum number of workers (optional)"
@@ -165,6 +179,7 @@ def main():
             template_id=args.template_id,
             name=args.name,
             gpu_ids=args.gpu_ids,
+            data_center_ids=args.data_center_ids,
             workers_min=args.workers_min,
             workers_max=args.workers_max
         )

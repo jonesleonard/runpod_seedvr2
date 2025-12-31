@@ -24,6 +24,11 @@ on:
         required: false
         type: string
         default: 'NVIDIA A40'
+      data_center_ids:
+        description: 'Data center IDs'
+        required: false
+        type: string
+        default: ''
       workers_min:
         description: 'Minimum number of workers'
         required: false
@@ -128,6 +133,13 @@ jobs:
           if [[ -n "$NETWORK_VOLUME_ID" ]]; then
             echo "Using network volume: $NETWORK_VOLUME_ID"
             ARGS+=(--network-volume-id "$NETWORK_VOLUME_ID")
+          fi
+          
+          # Add data center IDs if specified
+          DATA_CENTER_IDS="${{ vars.DATA_CENTER_IDS || inputs.data_center_ids }}"
+          if [[ -n "$DATA_CENTER_IDS" ]]; then
+            echo "Using data center IDs: $DATA_CENTER_IDS"
+            ARGS+=(--data-center-ids "$DATA_CENTER_IDS")
           fi
           
           python -m runpod_mgmt.endpoint.create_endpoint "${ARGS[@]}"

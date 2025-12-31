@@ -16,22 +16,23 @@ from .update_endpoint import update_endpoint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def _normalize_gpu_ids_for_sdk(gpu_ids: Optional[Any]) -> Optional[str]:
-    if gpu_ids is None:
+def _normalize_ids_for_sdk(ids: Optional[Any]) -> Optional[str]:
+    if ids is None:
         return None
-    if isinstance(gpu_ids, list):
-        parts = [str(item).strip() for item in gpu_ids if str(item).strip()]
+    if isinstance(ids, list):
+        parts = [str(item).strip() for item in ids if str(item).strip()]
         return ",".join(parts) if parts else None
-    if isinstance(gpu_ids, str):
-        parts = [item.strip() for item in gpu_ids.split(",") if item.strip()]
+    if isinstance(ids, str):
+        parts = [item.strip() for item in ids.split(",") if item.strip()]
         return ",".join(parts) if parts else None
-    return str(gpu_ids).strip()
+    return str(ids).strip()
 
 
 def create_or_update_endpoint(
     name: str,
     template_id: str,
     gpu_ids: str = "NVIDIA A40",
+    data_center_ids: Optional[Any] = None,
     workers_min: int = 0,
     workers_max: int = 1,
     idle_timeout: int = 5,
@@ -66,7 +67,8 @@ def create_or_update_endpoint(
         raise ValueError("RUNPOD_API_KEY environment variable is required")
     
     runpod.api_key = api_key
-    normalized_gpu_ids = _normalize_gpu_ids_for_sdk(gpu_ids)
+    normalized_gpu_ids = _normalize_ids_for_sdk(gpu_ids)
+    normalized_data_center_ids = _normalize_ids_for_sdk(data_center_ids)
     
     # Check if we should update an existing endpoint
     if endpoint_id:
@@ -77,6 +79,7 @@ def create_or_update_endpoint(
             api_key=api_key,
             name=name,
             gpu_ids=normalized_gpu_ids,
+            data_center_ids=data_center_ids,
             workers_min=workers_min,
             workers_max=workers_max,
             idle_timeout=idle_timeout,
@@ -100,6 +103,7 @@ def create_or_update_endpoint(
             api_key=api_key,
             name=name,
             gpu_ids=normalized_gpu_ids,
+            data_center_ids=data_center_ids,
             workers_min=workers_min,
             workers_max=workers_max,
             idle_timeout=idle_timeout,
@@ -117,6 +121,7 @@ def create_or_update_endpoint(
             name=name,
             template_id=template_id,
             gpu_ids=normalized_gpu_ids,
+            locations=normalized_data_center_ids,
             workers_min=workers_min,
             workers_max=workers_max,
             idle_timeout=idle_timeout,
@@ -139,6 +144,7 @@ def create_or_update_endpoint(
                 api_key=api_key,
                 name=name,
                 gpu_ids=normalized_gpu_ids,
+                data_center_ids=data_center_ids,
                 workers_min=workers_min,
                 workers_max=workers_max,
                 idle_timeout=idle_timeout,
@@ -199,6 +205,11 @@ Environment Variables:
         default="NVIDIA A40",
         help="GPU type IDs (default: NVIDIA A40)"
     )
+
+    parser.add_argument(
+        "--data-center-ids",
+        help="Data center IDs (optional)"
+    )
     
     parser.add_argument(
         "--workers-min",
@@ -254,6 +265,7 @@ Environment Variables:
             name=args.name,
             template_id=args.template_id,
             gpu_ids=args.gpu_ids,
+            data_center_ids=args.data_center_ids,
             workers_min=args.workers_min,
             workers_max=args.workers_max,
             idle_timeout=args.idle_timeout,
