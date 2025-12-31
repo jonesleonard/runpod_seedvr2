@@ -74,7 +74,7 @@ def _presign_put(
     expires: int,
     content_type: Optional[str],
 ) -> str:
-    params = {"Bucket": bucket, "Key": key}
+    params = {"Bucket": bucket, "Key": key, "ServerSideEncryption": "AES256"}
     if content_type:
         params["ContentType"] = content_type
     return s3_client.generate_presigned_url(

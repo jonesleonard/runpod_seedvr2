@@ -287,7 +287,7 @@ main() {
     response_file="$(mktemp)"
     local http_code
     http_code=$(curl -sS -o "$response_file" -w "%{http_code}" --retry 3 --retry-delay 2 \
-        -X PUT -T "$OUTPUT_FILE" -H "Content-Type: video/mp4" "$OUTPUT_PRESIGNED_URL" || true)
+        -X PUT -T "$OUTPUT_FILE" -H "Content-Type: video/mp4" -H "x-amz-server-side-encryption: AES256" "$OUTPUT_PRESIGNED_URL" || true)
     if [[ "$http_code" != "200" && "$http_code" != "204" ]]; then
         log_error "Failed to upload segment using presigned URL (HTTP ${http_code})"
         if [[ -s "$response_file" ]]; then
