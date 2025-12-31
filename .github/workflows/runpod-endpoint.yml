@@ -118,7 +118,7 @@ jobs:
             --workers-min ${{ vars.WORKERS_MIN || inputs.workers_min }}
             --workers-max ${{ vars.WORKERS_MAX || inputs.workers_max }}
             --idle-timeout ${{ vars.IDLE_TIMEOUT || inputs.idle_timeout }}
-            --execution-timeout ${{ vars.EXECUTION_TIMEOUT_MS || inputs.execution_timeout_ms }}
+            --execution-timeout-ms ${{ vars.EXECUTION_TIMEOUT_MS || inputs.execution_timeout_ms }}
             --scaler-type "${{ vars.SCALER_TYPE || inputs.scaler_type }}"
             --scaler-value ${{ vars.SCALER_VALUE || inputs.scaler_value }}
           )

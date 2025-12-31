@@ -210,7 +210,7 @@ Environment Variables:
     )
     
     parser.add_argument(
-        "--execution-timeout",
+        "--execution-timeout-ms",
         type=int,
         default=600000,
         help="Execution timeout in milliseconds (default: 600000)"
@@ -245,7 +245,7 @@ Environment Variables:
             workers_min=args.workers_min,
             workers_max=args.workers_max,
             idle_timeout=args.idle_timeout,
-            execution_timeout_ms=args.execution_timeout,
+            execution_timeout_ms=args.execution_timeout_ms,
             scaler_type=args.scaler_type,
             scaler_value=args.scaler_value,
             endpoint_id=args.endpoint_id,

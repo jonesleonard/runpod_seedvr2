@@ -209,39 +209,44 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
         
         # Execute the shell script
         logger.info(f"Executing: {SCRIPT_PATH}")
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["/bin/bash", SCRIPT_PATH],
             env=env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=3600  # 1 hour timeout
         )
-        
-        # Parse metrics from stdout (look for [METRIC] lines)
+
         metrics = {}
-        for line in result.stdout.splitlines():
-            if "[METRIC]" in line:
-                # Extract metric name and value
-                # Format: [METRIC] 2025-12-29T12:34:56Z metric_name=value
-                parts = line.split("=", 1)
-                if len(parts) == 2:
-                    metric_name = parts[0].split()[-1]
-                    metric_value = parts[1].strip()
-                    try:
-                        # Try to convert to number
-                        metrics[metric_name] = float(metric_value) if "." in metric_value else int(metric_value)
-                    except ValueError:
-                        metrics[metric_name] = metric_value
-        
-        if result.returncode != 0:
-            logger.error(f"Script failed with exit code {result.returncode}")
-            logger.error(f"STDOUT:\n{result.stdout}")
-            logger.error(f"STDERR:\n{result.stderr}")
+        output_lines = []
+
+        try:
+            for line in process.stdout:
+                output_lines.append(line)
+                logger.info(line.rstrip())
+                if "[METRIC]" in line:
+                    parts = line.split("=", 1)
+                    if len(parts) == 2:
+                        metric_name = parts[0].split()[-1]
+                        metric_value = parts[1].strip()
+                        try:
+                            metrics[metric_name] = (
+                                float(metric_value) if "." in metric_value else int(metric_value)
+                            )
+                        except ValueError:
+                            metrics[metric_name] = metric_value
+        finally:
+            process.stdout.close()
+
+        return_code = process.wait(timeout=3600)
+
+        if return_code != 0:
+            logger.error("Script failed with exit code %s", return_code)
             
             return {
                 "status": "error",
-                "error": f"Script exited with code {result.returncode}",
-                "stderr": result.stderr[-1000:],  # Last 1000 chars
+                "error": f"Script exited with code {return_code}",
+                "stderr": "".join(output_lines)[-1000:],  # Last 1000 chars
                 "duration_seconds": round(time.time() - start_time, 2)
             }
         

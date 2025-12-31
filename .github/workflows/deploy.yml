@@ -64,7 +64,7 @@ jobs:
     with:
       environment: "dev"
       endpoint_name: 'seedvr2-upscaler-endpoint'
-      execution_timeout_ms: 1800
+      execution_timeout_ms: 1800000
       runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
       python_version: ${{ vars.PYTHON_VERSION }}
       template_id: ${{ needs.create-update-runpod-template.outputs.template_id }}
