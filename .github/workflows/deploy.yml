@@ -56,6 +56,8 @@ jobs:
       full_image_name: ${{ needs.build-and-push.outputs.full_image_name }}
       template_name: 'seedvr2_upscaler'
       volume: 40
+      env_vars: |
+        LOG_LEVEL=DEBUG
     secrets:
       RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
   

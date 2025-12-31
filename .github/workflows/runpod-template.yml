@@ -26,6 +26,11 @@ on:
         required: false
         type: string
         default: 'seedvr2_upscaler'
+      env_vars:
+        description: 'Newline-separated KEY=VALUE environment variables'
+        required: false
+        type: string
+        default: ''
       is_serverless:
         description: 'Whether the template should be serverless'
         required: false
@@ -103,6 +108,13 @@ jobs:
 
           if [[ "${{ inputs.is_serverless }}" == "false" ]]; then
             ARGS+=(--non-serverless)
+          fi
+
+          if [[ -n "${{ inputs.env_vars }}" ]]; then
+            while IFS= read -r line; do
+              [[ -z "$line" ]] && continue
+              ARGS+=(--env "$line")
+            done <<< "${{ inputs.env_vars }}"
           fi
           
           export PYTHONPATH="${GITHUB_WORKSPACE}/src"
