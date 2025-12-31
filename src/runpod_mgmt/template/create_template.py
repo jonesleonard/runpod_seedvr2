@@ -231,6 +231,8 @@ Environment Variables:
         result = create_template(
             name=args.name,
             image=args.image,
+            container_disk_in_gb=args.container_disk,
+            volume_in_gb=args.volume,
             is_serverless=args.is_serverless,
             env_vars=env_vars if env_vars else None,
             template_id=args.template_id
