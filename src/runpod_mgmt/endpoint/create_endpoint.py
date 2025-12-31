@@ -8,7 +8,7 @@ import os
 import sys
 import argparse
 import logging
-from typing import Optional
+from typing import Optional, Any
 import runpod
 from .find_endpoint_by_name import find_endpoint_by_name
 from .update_endpoint import update_endpoint
@@ -16,11 +16,22 @@ from .update_endpoint import update_endpoint
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def _normalize_gpu_ids_for_sdk(gpu_ids: Optional[Any]) -> Optional[str]:
+    if gpu_ids is None:
+        return None
+    if isinstance(gpu_ids, list):
+        parts = [str(item).strip() for item in gpu_ids if str(item).strip()]
+        return ",".join(parts) if parts else None
+    if isinstance(gpu_ids, str):
+        parts = [item.strip() for item in gpu_ids.split(",") if item.strip()]
+        return ",".join(parts) if parts else None
+    return str(gpu_ids).strip()
+
 
 def create_or_update_endpoint(
     name: str,
     template_id: str,
-    gpu_ids: str = "AMPERE_16",
+    gpu_ids: str = "NVIDIA A40",
     workers_min: int = 0,
     workers_max: int = 1,
     idle_timeout: int = 5,
@@ -36,7 +47,7 @@ def create_or_update_endpoint(
     Args:
         name: Endpoint name
         template_id: Template ID to use
-        gpu_ids: GPU type IDs (default: "AMPERE_16")
+        gpu_ids: GPU type IDs (default: "NVIDIA A40")
         workers_min: Minimum number of workers (default: 0)
         workers_max: Maximum number of workers (default: 1)
         idle_timeout: Idle timeout in seconds (default: 5)
@@ -55,6 +66,7 @@ def create_or_update_endpoint(
         raise ValueError("RUNPOD_API_KEY environment variable is required")
     
     runpod.api_key = api_key
+    normalized_gpu_ids = _normalize_gpu_ids_for_sdk(gpu_ids)
     
     # Check if we should update an existing endpoint
     if endpoint_id:
@@ -64,7 +76,7 @@ def create_or_update_endpoint(
             template_id=template_id,
             api_key=api_key,
             name=name,
-            gpu_ids=gpu_ids,
+            gpu_ids=normalized_gpu_ids,
             workers_min=workers_min,
             workers_max=workers_max,
             idle_timeout=idle_timeout,
@@ -87,7 +99,7 @@ def create_or_update_endpoint(
             template_id=template_id,
             api_key=api_key,
             name=name,
-            gpu_ids=gpu_ids,
+            gpu_ids=normalized_gpu_ids,
             workers_min=workers_min,
             workers_max=workers_max,
             idle_timeout=idle_timeout,
@@ -104,7 +116,7 @@ def create_or_update_endpoint(
         response = runpod.create_endpoint(
             name=name,
             template_id=template_id,
-            gpu_ids=gpu_ids,
+            gpu_ids=normalized_gpu_ids,
             workers_min=workers_min,
             workers_max=workers_max,
             idle_timeout=idle_timeout,
@@ -126,7 +138,7 @@ def create_or_update_endpoint(
                 template_id=template_id,
                 api_key=api_key,
                 name=name,
-                gpu_ids=gpu_ids,
+                gpu_ids=normalized_gpu_ids,
                 workers_min=workers_min,
                 workers_max=workers_max,
                 idle_timeout=idle_timeout,
@@ -157,7 +169,7 @@ Examples:
   python create_endpoint.py --name "My Endpoint" --template-id NEW_TEMPLATE_ID --endpoint-id YOUR_ENDPOINT_ID
   
   # Create with custom settings:
-  python create_endpoint.py --name "My Endpoint" --template-id YOUR_TEMPLATE_ID --gpu-ids "AMPERE_16" --workers-max 3
+  python create_endpoint.py --name "My Endpoint" --template-id YOUR_TEMPLATE_ID --gpu-ids "NVIDIA A40" --workers-max 3
 
 Environment Variables:
   RUNPOD_API_KEY              - Your RunPod API key (required)
@@ -184,8 +196,8 @@ Environment Variables:
     
     parser.add_argument(
         "--gpu-ids",
-        default="AMPERE_16",
-        help="GPU type IDs (default: AMPERE_16)"
+        default="NVIDIA A40",
+        help="GPU type IDs (default: NVIDIA A40)"
     )
     
     parser.add_argument(

@@ -8,13 +8,23 @@ updating the template, so we use the REST API directly.
 import os
 import logging
 import requests
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def _normalize_gpu_ids_for_rest(gpu_ids: Optional[Any]) -> Optional[List[str]]:
+    if gpu_ids is None:
+        return None
+    if isinstance(gpu_ids, list):
+        return [str(item).strip() for item in gpu_ids if str(item).strip()]
+    if isinstance(gpu_ids, str):
+        return [item.strip() for item in gpu_ids.split(",") if item.strip()]
+    return [str(gpu_ids).strip()]
 
 
 def update_endpoint(
@@ -72,8 +82,9 @@ def update_endpoint(
     
     if name is not None:
         payload["name"] = name
-    if gpu_ids is not None:
-        payload["gpuTypeIds"] = [gpu_ids] if isinstance(gpu_ids, str) else gpu_ids
+    normalized_gpu_ids = _normalize_gpu_ids_for_rest(gpu_ids)
+    if normalized_gpu_ids:
+        payload["gpuTypeIds"] = normalized_gpu_ids
     if workers_min is not None:
         payload["workersMin"] = workers_min
     if workers_max is not None:

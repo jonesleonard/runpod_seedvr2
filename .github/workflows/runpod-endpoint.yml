@@ -23,7 +23,7 @@ on:
         description: 'GPU type IDs'
         required: false
         type: string
-        default: 'AMPERE_16'
+        default: 'NVIDIA A40'
       workers_min:
         description: 'Minimum number of workers'
         required: false

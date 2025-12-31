@@ -6,6 +6,9 @@ on:
       - main
     tags:
       - 'v*.*.*'
+    paths:
+      - 'src/upscale/**'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       tag:

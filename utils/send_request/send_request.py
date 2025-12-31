@@ -67,10 +67,10 @@ def _presign_get(s3_client, bucket: str, key: str, expires: int) -> str:
     )
 
 
-def _presign_put(s3_client, bucket: str, key: str, expires: int) -> str:
-    return s3_client.generate_presigned_url(
-        "put_object",
-        Params={"Bucket": bucket, "Key": key},
+def _presign_post(s3_client, bucket: str, key: str, expires: int) -> dict:
+    return s3_client.generate_presigned_post(
+        Bucket=bucket,
+        Key=key,
         ExpiresIn=expires,
     )
 
@@ -166,7 +166,7 @@ def main() -> int:
     s3_client = _get_s3_client(region, role_arn, role_session_name)
 
     input_url = _presign_get(s3_client, input_bucket, input_key, expires)
-    output_url = _presign_put(s3_client, output_bucket, output_key, expires)
+    output_url, fields = _presign_post(s3_client, output_bucket, output_key, expires)
     vae_url = _presign_get(s3_client, vae_bucket, vae_key, expires)
     dit_url = _presign_get(s3_client, dit_bucket, dit_key, expires)
 
@@ -198,8 +198,8 @@ def main() -> int:
         result = endpoint.run_sync(payload, timeout=timeout)
         print(json.dumps(result, indent=2))
     else:
-        job = endpoint.run(payload)
-        print(json.dumps({"job_id": job.job_id, "payload": payload}, indent=2))
+        # job = endpoint.run(payload)
+        print(json.dumps({"job_id": 'test', "payload": payload}, indent=2))
 
     return 0
 

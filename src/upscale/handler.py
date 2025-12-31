@@ -156,13 +156,15 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
 
         # Validate input - now using presigned URLs instead of S3 URIs
         input_presigned_url = job_input.get("input_presigned_url")
-        output_presigned_url = job_input.get("output_presigned_url")
+        output_presigned_post = job_input.get("output_presigned_post")
         vae_model_presigned_url = job_input.get("vae_model_presigned_url")
         dit_model_presigned_url = job_input.get("dit_model_presigned_url")
         params = job_input.get("params", {})
         
-        if not input_presigned_url or not output_presigned_url:
-            raise ValueError("input_presigned_url and output_presigned_url are required")
+        if not input_presigned_url:
+            raise ValueError("input_presigned_url is required")
+        if not output_presigned_post:
+            raise ValueError("output_presigned_post is required")
         if not vae_model_presigned_url or not dit_model_presigned_url:
             raise ValueError(
                 "vae_model_presigned_url and dit_model_presigned_url are required"
@@ -176,8 +178,16 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
         env = os.environ.copy()
         env.update({
             "INPUT_PRESIGNED_URL": input_presigned_url,
-            "OUTPUT_PRESIGNED_URL": output_presigned_url,
         })
+        if output_presigned_post:
+            output_post_url = output_presigned_post.get("url")
+            output_post_fields = output_presigned_post.get("fields", {})
+            if not output_post_url or not output_post_fields:
+                raise ValueError("output_presigned_post must include url and fields")
+            env["OUTPUT_POST_URL"] = output_post_url
+            env["OUTPUT_POST_FIELDS"] = "\n".join(
+                f"{key}={value}" for key, value in output_post_fields.items()
+            )
         
         # Map params to environment variables
         param_mapping = {
@@ -256,7 +266,6 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
         
         return {
             "status": "success",
-            "output_presigned_url": output_presigned_url,
             "metrics": {
                 **metrics,
                 "total_duration_seconds": round(total_duration, 2)
