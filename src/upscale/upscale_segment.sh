@@ -257,7 +257,7 @@ main() {
     )
     
     # Add optional parameters if set
-    [[ -n "$DEBUG" ]] && inference_cmd+=(--debug "$DEBUG")
+    [[ "$DEBUG" == "true" ]] && inference_cmd+=(--debug)
     [[ -n "$ATTENTION_MODE" ]] && inference_cmd+=(--attention_mode "$ATTENTION_MODE")
     [[ -n "$CHUNK_SIZE" ]] && inference_cmd+=(--chunk_size "$CHUNK_SIZE")
     [[ -n "$TEMPORAL_OVERLAP" ]] && inference_cmd+=(--temporal_overlap "$TEMPORAL_OVERLAP")
