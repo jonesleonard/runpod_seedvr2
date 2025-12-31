@@ -92,7 +92,6 @@ main() {
     readonly COLOR_CORRECTION="${COLOR_CORRECTION:-lab}"
     readonly MODEL="${MODEL:-7b}"
     readonly RESOLUTION="${RESOLUTION:-1080}"
-    readonly CHUNK_SIZE="${CHUNK_SIZE:-}"
     readonly ATTENTION_MODE="${ATTENTION_MODE:-}"
     readonly TEMPORAL_OVERLAP="${TEMPORAL_OVERLAP:-}"
     readonly VAE_ENCODE_TILED="${VAE_ENCODE_TILED:-}"

@@ -14,7 +14,8 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 import runpod
 
-logging.basicConfig(level=logging.INFO)
+level = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, level, logging.INFO))
 logger = logging.getLogger(__name__)
 
 SCRIPT_PATH = "/app/upscale_segment.sh"
@@ -75,6 +76,19 @@ def _ensure_models_downloaded(job_input: Dict[str, Any]) -> None:
     _MODELS_READY = True
 
 
+def _set_log_level(job_input: Dict[str, Any]) -> None:
+    level = job_input.get("log_level") or job_input.get("params", {}).get("log_level")
+    if not level:
+        return
+    level_name = str(level).upper()
+    new_level = getattr(logging, level_name, None)
+    if new_level is None:
+        logger.warning("Unknown log level '%s'; using default.", level)
+        return
+    logger.setLevel(new_level)
+    logging.getLogger().setLevel(new_level)
+
+
 def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
     """
     Upscale a single video segment by invoking the shell script.
@@ -105,6 +119,8 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
 
         # debug log job input
         logger.debug(f"Received job input: {json.dumps(job_input, indent=2)}")
+
+        _set_log_level(job_input)
 
         # Validate input - now using presigned URLs instead of S3 URIs
         input_presigned_url = job_input.get("input_presigned_url")

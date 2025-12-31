@@ -111,6 +111,10 @@ def main() -> int:
 
     parser.add_argument("--params-json", help="Inline JSON for params")
     parser.add_argument("--params-file", help="Path to JSON file for params")
+    parser.add_argument(
+        "--log-level",
+        help="Log level to send with the request (e.g., DEBUG, INFO, WARNING)",
+    )
 
     args = parser.parse_args()
 
@@ -167,6 +171,10 @@ def main() -> int:
     dit_url = _presign_get(s3_client, dit_bucket, dit_key, expires)
 
     params = _load_params(args.params_json, args.params_file, config)
+    if args.log_level:
+        params["log_level"] = args.log_level
+    elif "log_level" in config:
+        params.setdefault("log_level", config["log_level"])
 
     payload = {
         "input_presigned_url": input_url,

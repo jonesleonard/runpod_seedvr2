@@ -41,6 +41,7 @@ and optionally set `--timeout`.
 - `--vae-key`/`--dit-key`: S3 keys for the model files.
 - `--vae-bucket`/`--dit-bucket`: Optional model buckets (defaults to input bucket).
 - `--params-json` or `--params-file`: Optional inference params.
+- `--log-level`: Log level to send with the request (e.g., `DEBUG`, `INFO`).
 
 ## Environment
 
@@ -70,6 +71,7 @@ dit_key: models/dit.safetensors
 params:
   model: "7b"
   resolution: 1080
+log_level: INFO
 run_sync: false
 timeout: 3600
 ```
