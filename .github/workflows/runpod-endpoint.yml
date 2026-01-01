@@ -3,32 +3,36 @@ name: Create or Update RunPod Endpoint
 on:
   workflow_call:
     inputs:
+      endpoint_name:
+        description: 'RunPod endpoint name'
+        required: true
+        type: string
       environment:
+        description: 'The environment to deploy to (e.g., dev, prod)'
         required: true
         type: string
       runpod_rest_api_base_url:
         description: 'RunPod REST API base URL'
         required: true
         type: string
+      network_volume_id:
+        description: 'RunPod network volume ID for persistent model storage'
+        required: false
+        type: string
+        default: ''
       template_id:
         description: 'RunPod template ID to use'
         required: true
         type: string
-      endpoint_name:
-        description: 'RunPod endpoint name'
-        required: false
+      data_center_id:
+        description: "Data center ID for the endpoint. If using a network volume, ensure the data center matches."
+        required: true
         type: string
-        default: 'SeedVR2 Video Upscaler'
       gpu_ids:
         description: 'GPU type IDs'
         required: false
         type: string
         default: 'NVIDIA A40'
-      data_center_ids:
-        description: 'Data center IDs'
-        required: false
-        type: string
-        default: ''
       workers_min:
         description: 'Minimum number of workers'
         required: false
@@ -64,11 +68,6 @@ on:
         required: false
         type: string
         default: '3.13'
-      network_volume_id:
-        description: 'RunPod network volume ID for persistent model storage'
-        required: false
-        type: string
-        default: ''
     secrets:
       RUNPOD_API_KEY:
         required: true
@@ -77,9 +76,6 @@ on:
         description: 'The ID of the created/updated endpoint'
         value: ${{ jobs.create-update-endpoint.outputs.endpoint_id }}
 
-env:
-  TEMPLATE_ID: ${{ inputs.template_id }}
-  ENDPOINT_NAME: ${{ inputs.endpoint_name }}
 
 permissions:
   contents: read
@@ -110,15 +106,15 @@ jobs:
         env:
           RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
         run: |
-          echo "Creating/updating RunPod endpoint: ${{ env.ENDPOINT_NAME }}"
-          echo "Using template ID: ${{ env.TEMPLATE_ID }}"
+          echo "Creating/updating RunPod endpoint: ${{ inputs.endpoint_name }}"
+          echo "Using template ID: ${{ inputs.template_id }}"
           
           export PYTHONPATH="${GITHUB_WORKSPACE}/src"
           
           # Build args array
           ARGS=(
-            --name "${{ env.ENDPOINT_NAME }}"
-            --template-id "${{ env.TEMPLATE_ID }}"
+            --name "${{ inputs.endpoint_name }}"
+            --template-id "${{ inputs.template_id }}"
             --gpu-ids "${{ vars.GPU_IDS || inputs.gpu_ids }}"
             --workers-min ${{ vars.WORKERS_MIN || inputs.workers_min }}
             --workers-max ${{ vars.WORKERS_MAX || inputs.workers_max }}
@@ -136,10 +132,10 @@ jobs:
           fi
           
           # Add data center IDs if specified
-          DATA_CENTER_IDS="${{ vars.DATA_CENTER_IDS || inputs.data_center_ids }}"
-          if [[ -n "$DATA_CENTER_IDS" ]]; then
-            echo "Using data center IDs: $DATA_CENTER_IDS"
-            ARGS+=(--data-center-ids "$DATA_CENTER_IDS")
+          DATA_CENTER_ID="${{ vars.DATA_CENTER_ID || inputs.data_center_id }}"
+          if [[ -n "$DATA_CENTER_ID" ]]; then
+            echo "Using data center ID: $DATA_CENTER_ID"
+            ARGS+=(--data-center-ids "$DATA_CENTER_ID")
           fi
           
           python -m runpod_mgmt.endpoint.create_endpoint "${ARGS[@]}"
@@ -148,6 +144,6 @@ jobs:
         if: success()
         run: |
           echo "✓ RunPod endpoint successfully created/updated"
-          echo "Name: ${{ env.ENDPOINT_NAME }}"
-          echo "Template ID: ${{ env.TEMPLATE_ID }}"
+          echo "Name: ${{ inputs.endpoint_name }}"
+          echo "Template ID: ${{ inputs.template_id }}"
           echo "Endpoint ID: ${{ steps.run.outputs.endpoint_id }}"

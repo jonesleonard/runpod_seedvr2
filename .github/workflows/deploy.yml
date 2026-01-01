@@ -82,5 +82,7 @@ jobs:
       runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
       python_version: ${{ vars.PYTHON_VERSION }}
       template_id: ${{ needs.create-update-runpod-template.outputs.template_id }}
+      data_center_id: ${{ vars.DATA_CENTER_ID }}
+      network_volume_id: ${{ needs.create-update-runpod-network-volume.outputs.network_volume_id }}
     secrets:
       RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
