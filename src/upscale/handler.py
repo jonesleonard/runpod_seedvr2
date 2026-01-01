@@ -4,7 +4,6 @@ Delegates to upscale_segment.sh for the actual work.
 """
 
 import os
-import sys
 import subprocess
 import logging
 import time
