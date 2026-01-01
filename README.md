@@ -154,17 +154,28 @@ The handler accepts jobs with the following input format:
 
 ```json
 {
-  "input_s3_uri": "s3://bucket/path/to/input.mp4",
-  "output_s3_uri": "s3://bucket/path/to/output.mp4",
+  "input_presigned_url": "https://.../input.mp4?X-Amz-...",
+  "output_presigned_url": "https://.../output.mp4?X-Amz-...",
   "params": {
     "model": "7b",
     "resolution": 1080,
-    "batch_size": 129,
-    "seed": 42,
-    "models_s3_prefix": "s3://bucket/models/"
-  }
+    "batch_size_strategy": "explicit",
+    "batch_size_explicit": 129,
+    "seed": 42
+  },
+  "download_models": false,
+  "vae_model_presigned_url": "https://.../vae.safetensors?X-Amz-...",
+  "dit_model_presigned_url": "https://.../dit_7b.safetensors?X-Amz-..."
 }
 ```
+
+### Model Management
+
+- Default model directory: `/runpod-volume/models` (mounted network volume).
+- If models are pre-populated on the network volume, set `download_models: false` (or omit) and the worker will use the existing files.
+- To download models at runtime, set `download_models: true` and provide presigned URLs for `vae_model_presigned_url` and `dit_model_presigned_url`.
+- You can also control downloads via environment: set `DOWNLOAD_MODELS=true|false`.
+- If `download_models` is false and the models directory is empty, the handler will fail fast with a clear error.
 
 ## CI/CD
 

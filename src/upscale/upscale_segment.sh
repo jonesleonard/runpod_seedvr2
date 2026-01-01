@@ -189,6 +189,14 @@ main() {
     log_info "Creating work directories..."
     mkdir -p "$INPUT_DIR" "$OUTPUT_DIR"
     
+    # Validate model directory exists and log path early
+    if [[ ! -d "$MODEL_DIR" ]]; then
+        log_error "Model directory does not exist: $MODEL_DIR"
+        log_error "Ensure your network volume is attached and populated at this path."
+        exit 1
+    fi
+    log_info "Model directory: $MODEL_DIR"
+    
     # Check models exist locally (pre-populated or downloaded at startup)
     local model_count
     model_count=$(find "$MODEL_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')

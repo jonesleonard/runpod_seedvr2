@@ -20,7 +20,9 @@ logging.basicConfig(level=getattr(logging, level, logging.INFO))
 logger = logging.getLogger(__name__)
 
 SCRIPT_PATH = "/app/upscale_segment.sh"
-MODELS_DEFAULT_DIR = "/models"
+# Default directory where models should reside when not downloading.
+# This aligns with the mounted network volume path used by the shell script.
+MODELS_DEFAULT_DIR = "/workspace/models"
 _MODELS_READY = False
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 
@@ -86,15 +88,40 @@ def _ensure_models_downloaded(job_input: Dict[str, Any]) -> None:
     global _MODELS_READY
     if _MODELS_READY:
         return
-
-    urls = _get_model_urls(job_input)
-    if not urls:
-        logger.info("No model URLs provided; skipping model download.")
-        _MODELS_READY = True
-        return
+    # Determine whether to download models based on job input or environment.
+    should_download = False
+    val = job_input.get("download_models") or job_input.get("params", {}).get("download_models")
+    if val is not None:
+        # Accept booleans or truthy strings
+        should_download = bool(val) if isinstance(val, bool) else str(val).lower() in {"1", "true", "yes", "on"}
+    else:
+        env_val = os.environ.get("DOWNLOAD_MODELS")
+        if env_val is not None:
+            should_download = str(env_val).lower() in {"1", "true", "yes", "on"}
 
     models_dir = Path(os.environ.get("MODELS_DIR", MODELS_DEFAULT_DIR))
     models_dir.mkdir(parents=True, exist_ok=True)
+
+    if not should_download:
+        # No download requested; verify models exist in the default directory
+        existing_files = list(models_dir.glob("*"))
+        if not existing_files:
+            raise ValueError(
+                f"Models directory '{models_dir}' is empty. "
+                "Provide presigned URLs and set 'download_models=true', "
+                "or pre-populate the models on the network volume."
+            )
+        logger.info("Using pre-existing models from %s (%d files)", models_dir, len(existing_files))
+        _MODELS_READY = True
+        return
+
+    # Download requested: require presigned URLs and fetch into models_dir
+    urls = _get_model_urls(job_input)
+    if not urls:
+        raise ValueError(
+            "download_models flag is set, but no model presigned URLs were provided. "
+            "Expected keys: 'vae_model_presigned_url' and 'dit_model_presigned_url'."
+        )
 
     for url in urls:
         filename = _filename_from_url(url)
@@ -136,7 +163,9 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
         }
     }
     
-    Models are loaded from local storage (default: /models).
+    Models are loaded from local storage (default: /workspace/models) unless
+    the 'download_models' flag is set (job_input param or DOWNLOAD_MODELS env),
+    in which case models are downloaded from provided presigned URLs.
     """
     start_time = time.time()
     
@@ -164,10 +193,7 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
             raise ValueError("input_presigned_url is required")
         if not output_presigned_url:
             raise ValueError("output_presigned_url is required")
-        if not vae_model_presigned_url or not dit_model_presigned_url:
-            raise ValueError(
-                "vae_model_presigned_url and dit_model_presigned_url are required"
-            )
+        # Model URLs are only required when download flag is enabled; _ensure_models_downloaded handles this.
 
         _ensure_models_downloaded(job_input)
         
