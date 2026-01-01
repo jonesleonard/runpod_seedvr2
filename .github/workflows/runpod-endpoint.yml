@@ -125,7 +125,7 @@ jobs:
           )
           
           # Add network volume if specified
-          NETWORK_VOLUME_ID="${{ vars.NETWORK_VOLUME_ID || inputs.network_volume_id }}"
+          NETWORK_VOLUME_ID="${{ inputs.network_volume_id }}"
           if [[ -n "$NETWORK_VOLUME_ID" ]]; then
             echo "Using network volume: $NETWORK_VOLUME_ID"
             ARGS+=(--network-volume-id "$NETWORK_VOLUME_ID")
