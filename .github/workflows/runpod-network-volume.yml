@@ -22,7 +22,7 @@ on:
         type: string
         default: "50"
       python_version:
-        description: "Python version to use"
+        description: "Python version to use for the script that executes the API calls"
         required: false
         type: string
         default: "3.13"

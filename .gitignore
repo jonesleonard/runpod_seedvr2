@@ -2,6 +2,8 @@ local.tfvars
 terraform.tfvars
 backend-config.tfvars
 utils/send_request/config.local.yaml
+utils/runpod/upload_large_file/config.yaml
+utils/runpod/s3_objects/config.yaml
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,windows,linux,visualstudiocode,eclipse,intellij+all,terraform,python

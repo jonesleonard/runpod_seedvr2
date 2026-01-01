@@ -31,7 +31,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   build-and-push:
     name: Build and Push Docker Image
     uses: ./.github/workflows/docker-build-push.yml
@@ -44,6 +43,18 @@ jobs:
         SEEDVR2_REF=${{ inputs.seedvr2_ref || vars.SEEDVR2_REF }}
     secrets:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+  
+  create-update-runpod-network-volume:
+    name: Create/Update RunPod Network Volume
+    uses: ./.github/workflows/runpod-network-volume.yml
+    with:
+      runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
+      network_volume_name: 'seedvr2_upscaler'
+      data_center_id: ${{ vars.DATA_CENTER_ID }}
+      network_volume_size: 30
+      python_version: ${{ vars.PYTHON_VERSION }}
+    secrets:
+      RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
   
   create-update-runpod-template:
     name: Create/Update RunPod Template
@@ -67,7 +78,7 @@ jobs:
     with:
       environment: "dev"
       endpoint_name: 'seedvr2-upscaler-endpoint'
-      execution_timeout_ms: 1800000
+      execution_timeout_ms: 3600000
       runpod_rest_api_base_url: ${{ vars.RUNPOD_REST_API_BASE_URL }}
       python_version: ${{ vars.PYTHON_VERSION }}
       template_id: ${{ needs.create-update-runpod-template.outputs.template_id }}
