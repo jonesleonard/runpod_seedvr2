@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 SCRIPT_PATH = "/app/upscale_segment.sh"
 # Default directory where models should reside when not downloading.
 # This aligns with the mounted network volume path used by the shell script.
-MODELS_DEFAULT_DIR = "/workspace/models"
+MODELS_DEFAULT_DIR = "/runpod-volume/models"
 _MODELS_READY = False
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
 

@@ -8,7 +8,7 @@ set -euo pipefail
 readonly WORK_DIR="/work"
 readonly INPUT_DIR="${WORK_DIR}/in"
 readonly OUTPUT_DIR="${WORK_DIR}/out"
-readonly MODEL_DIR="${MODELS_DIR:-/workspace/models}"  # Local model storage (can override)
+readonly MODEL_DIR="${MODELS_DIR:-/runpod-volume/models}"  # Local model storage (can override)
 readonly INPUT_FILE="${INPUT_DIR}/segment.mp4"
 readonly OUTPUT_FILE="${OUTPUT_DIR}/segment.mp4"
 
