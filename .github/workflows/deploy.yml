@@ -73,7 +73,9 @@ jobs:
   
   create-update-endpoint:
     name: Create/Update RunPod Endpoint
-    needs: create-update-runpod-template
+    needs: 
+      - create-update-runpod-template
+      - create-update-runpod-network-volume
     uses: ./.github/workflows/runpod-endpoint.yml
     with:
       environment: "dev"
