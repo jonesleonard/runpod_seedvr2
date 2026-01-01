@@ -163,7 +163,7 @@ def upscale_segment(job: Dict[str, Any]) -> Dict[str, Any]:
         }
     }
     
-    Models are loaded from local storage (default: /workspace/models) unless
+    Models are loaded from local storage (default: /runpod-volume/models) unless
     the 'download_models' flag is set (job_input param or DOWNLOAD_MODELS env),
     in which case models are downloaded from provided presigned URLs.
     """
