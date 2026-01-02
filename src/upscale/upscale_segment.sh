@@ -10,6 +10,8 @@ readonly INPUT_DIR="${WORK_DIR}/in"
 readonly OUTPUT_DIR="${WORK_DIR}/out"
 readonly MODEL_DIR="${MODELS_DIR:-/runpod-volume/models}"  # Local model storage (can override)
 readonly INPUT_FILE="${INPUT_DIR}/segment.mp4"
+readonly AUDIO_FILE="${INPUT_DIR}/audio.aac"
+readonly OUTPUT_FILE_NO_AUDIO="${OUTPUT_DIR}/segment_no_audio.mp4"
 readonly OUTPUT_FILE="${OUTPUT_DIR}/segment.mp4"
 
 cleanup() {
@@ -237,6 +239,27 @@ main() {
     log_info "Downloaded segment file size: ${file_size} bytes"
     log_metric "input_segment_size_bytes" "$file_size"
     
+    # Extract audio from input video (if present)
+    log_info "Extracting audio from input video..."
+    local has_audio=false
+    if ffmpeg -i "$INPUT_FILE" -t 1 -f null - 2>&1 | grep -q "Audio:"; then
+        log_info "Audio stream detected, extracting..."
+        if ffmpeg -i "$INPUT_FILE" -vn -acodec copy "$AUDIO_FILE" -y -loglevel error; then
+            has_audio=true
+            local audio_size
+            audio_size=$(stat -f%z "$AUDIO_FILE" 2>/dev/null || stat -c%s "$AUDIO_FILE" 2>/dev/null || echo "0")
+            log_info "Audio extracted: ${audio_size} bytes"
+            log_metric "has_audio" "true"
+        else
+            log_error "Failed to extract audio, will proceed without it"
+            has_audio=false
+            log_metric "has_audio" "false"
+        fi
+    else
+        log_info "No audio stream found in input video"
+        log_metric "has_audio" "false"
+    fi
+    
     # Run SeedVR2 upscaling
     log_info "Starting SeedVR2 upscaling..."
     local start_time
@@ -275,10 +298,39 @@ main() {
     log_info "Upscaling completed in ${duration} seconds"
     log_metric "upscale_duration_seconds" "$duration"
     
+    # The upscaled video is now at OUTPUT_FILE (video only, no audio)
     # Verify output file was created
     if [[ ! -f "$OUTPUT_FILE" ]]; then
         log_error "Output file was not created: $OUTPUT_FILE"
         exit 1
+    fi
+    
+    # If we extracted audio, merge it back with the upscaled video
+    if [[ "$has_audio" == "true" ]]; then
+        log_info "Merging audio back into upscaled video..."
+        local merge_start
+        merge_start=$(date +%s)
+        
+        # Move the video-only output to temporary location
+        mv "$OUTPUT_FILE" "$OUTPUT_FILE_NO_AUDIO"
+        
+        # Merge video and audio
+        if ! ffmpeg -i "$OUTPUT_FILE_NO_AUDIO" -i "$AUDIO_FILE" \
+            -c:v copy -c:a aac -shortest \
+            "$OUTPUT_FILE" -y -loglevel error; then
+            log_error "Failed to merge audio with upscaled video"
+            # Fallback: use video-only output
+            mv "$OUTPUT_FILE_NO_AUDIO" "$OUTPUT_FILE"
+            log_info "Continuing with video-only output"
+        else
+            local merge_end
+            merge_end=$(date +%s)
+            local merge_duration=$((merge_end - merge_start))
+            log_info "Audio merged in ${merge_duration} seconds"
+            log_metric "audio_merge_duration_seconds" "$merge_duration"
+            # Clean up temporary file
+            rm -f "$OUTPUT_FILE_NO_AUDIO"
+        fi
     fi
     
     local output_size
