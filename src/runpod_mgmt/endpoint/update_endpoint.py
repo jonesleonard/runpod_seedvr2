@@ -111,7 +111,7 @@ def update_endpoint(
         payload["networkVolumeId"] = network_volume_id
     
     logger.info(f"Updating endpoint {endpoint_id} with template {template_id}")
-    logger.debug(f"Payload: {payload}")
+    logger.info(f"Payload: {payload}")
     
     try:
         response = requests.patch(url, json=payload, headers=headers)
